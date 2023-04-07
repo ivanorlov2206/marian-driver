@@ -41,86 +41,89 @@ static int snd_marian_create(struct snd_card* card, struct pci_dev *pci, struct 
 static void snd_marian_card_free(struct snd_card *card);
 
 // ALSA interface
-static int snd_marian_create(struct snd_card* card, struct pci_dev *pci, 
-														 struct marian_card_descriptor* desc, unsigned int idx);
+static int snd_marian_create(struct snd_card* card, struct pci_dev *pci,
+				struct marian_card_descriptor* desc, unsigned int idx);
 static void snd_marian_card_free(struct snd_card *card) ;
 static int snd_marian_playback_open(struct snd_pcm_substream* substream);
 static int snd_marian_playback_release(struct snd_pcm_substream *substream);
 static int snd_marian_capture_open(struct snd_pcm_substream* substream);
 static int snd_marian_capture_release(struct snd_pcm_substream* substream);
-static int snd_marian_hw_params(struct snd_pcm_substream* substream,
-																struct snd_pcm_hw_params *params);
+static int snd_marian_hw_params(struct snd_pcm_substream* substream, struct snd_pcm_hw_params *params);
 static int snd_marian_hw_free(struct snd_pcm_substream* substream);
 static int snd_marian_prepare(struct snd_pcm_substream* substream);
 static int snd_marian_trigger(struct snd_pcm_substream* substream, int cmd);
 static snd_pcm_uframes_t snd_marian_hw_pointer(struct snd_pcm_substream* substream);
 static int snd_marian_ioctl(struct snd_pcm_substream*, unsigned int, void*);
 
-static void snd_marian_proc_status(struct snd_info_entry * entry,
-																	 struct snd_info_buffer *buffer);
-static void snd_marian_proc_ports_in(struct snd_info_entry *entry,
-																		 struct snd_info_buffer *buffer);
-static void snd_marian_proc_ports_out(struct snd_info_entry *entry,
-																			struct snd_info_buffer *buffer);
-static int snd_marian_mmap(struct snd_pcm_substream* substream,
-                           struct vm_area_struct* vma);
+static void snd_marian_proc_status(struct snd_info_entry * entry, struct snd_info_buffer *buffer);
+static void snd_marian_proc_ports_in(struct snd_info_entry *entry, struct snd_info_buffer *buffer);
+static void snd_marian_proc_ports_out(struct snd_info_entry *entry, struct snd_info_buffer *buffer);
+static int snd_marian_mmap(struct snd_pcm_substream* substream, struct vm_area_struct* vma);
 
 
 
 static struct marian_card_descriptor descriptors[7] = {
-	{ .name = "Seraph A3", 
+	{
+		.name = "Seraph A3",
 		.speedmode_max = 2,
-		.ch_in = 24, 
-		.ch_out = 24, 
+		.ch_in = 24,
+		.ch_out = 24,
 		.dma_ch_offset = 32,
-		.dma_bufsize = 2*32*2*2048*4, 
+		.dma_bufsize = 2*32*2*2048*4,
 		.create_controls = marian_a3_create_controls,
 		.prepare = marian_a3_prepare,
 		.init_card = marian_a3_init,
 		.proc_status = marian_a3_proc_status,
 		.proc_ports = marian_a3_proc_ports,
-		.info_playback = { .info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED | SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
-											 .formats = SNDRV_PCM_FMTBIT_S24_3LE,
-											 .rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
-																 SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000),
-											 .rate_min = 28000,
-											 .rate_max = 113000,
-											 .channels_min = 1,
-											 .channels_max = 24,
-											 .buffer_bytes_max = 2*24*2*4096*4,
-											 .period_bytes_min = 16*4,
-											 .period_bytes_max = 2048*4*24,
-											 .periods_min = 2,
-											 .periods_max = 2
+		.info_playback = {
+			.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED | SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
+			.formats = SNDRV_PCM_FMTBIT_S24_3LE,
+			.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
+					SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000),
+			.rate_min = 28000,
+			.rate_max = 113000,
+			.channels_min = 1,
+			.channels_max = 24,
+			.buffer_bytes_max = 2*24*2*4096*4,
+			.period_bytes_min = 16*4,
+			.period_bytes_max = 2048*4*24,
+			.periods_min = 2,
+			.periods_max = 2
 		},
-		.info_capture = { .info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED | SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
-											.formats = SNDRV_PCM_FMTBIT_S24_3LE,
-											.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
-																SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000),
-											.rate_min = 28000,
-											.rate_max = 113000,
-											.channels_min = 1,
-											.channels_max = 24,
-											.buffer_bytes_max = 2*24*2*4096*4, 
-											.period_bytes_min = 16*4,
-											.period_bytes_max = 2048*4*24,
-											.periods_min = 2,
-											.periods_max = 2
+		.info_capture = {
+			.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED | SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
+			.formats = SNDRV_PCM_FMTBIT_S24_3LE,
+			.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
+								SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000),
+			.rate_min = 28000,
+			.rate_max = 113000,
+			.channels_min = 1,
+			.channels_max = 24,
+			.buffer_bytes_max = 2*24*2*4096*4, 
+			.period_bytes_min = 16*4,
+			.period_bytes_max = 2048*4*24,
+			.periods_min = 2,
+			.periods_max = 2
 		 }
 	},
-	{ .name = "C-Box", 
+	{
+		.name = "C-Box", 
 		.speedmode_max = 4,
 	},
-	{ .name = "Seraph AD2", 
+	{
+		.name = "Seraph AD2", 
 		.speedmode_max = 4, 
 	},
-	{ .name = "Seraph D4", 
+	{
+		.name = "Seraph D4", 
 		.speedmode_max = 4, 
 	},
-	{ .name = "Seraph D8", 
+	{
+		.name = "Seraph D8", 
 		.speedmode_max = 4, 
 	},
-	{ .name = "Seraph 8", 
+	{
+		.name = "Seraph 8", 
 		.port_names = "1=Analogue 1\n2=Analogue 2\n3=Analogue 3\n4=Analogue 4\n"
 		"5=Analogue 5\n6=Analogue 6\n7=Analogue 7\n8=Analogue 8\n",
 		.speedmode_max = 4,
@@ -132,38 +135,41 @@ static struct marian_card_descriptor descriptors[7] = {
 		.prepare = marian_seraph8_prepare,
 		.init_codec = marian_seraph8_init_codec,
 		.proc_status = marian_seraph8_proc_status,
-		.info_playback = { .info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED | SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
-											 .formats = SNDRV_PCM_FMTBIT_S32_LE,
-											 .rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
-																 SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 |
-																 SNDRV_PCM_RATE_176400 | SNDRV_PCM_RATE_192000),
-											 .rate_min = 28000,
-											 .rate_max = 216000,
-											 .channels_min = 1,
-											 .channels_max = 8,
-											 .buffer_bytes_max = 2*8*2*4096*4,
-											 .period_bytes_min = 16*4,
-											 .period_bytes_max = 2048*4*8,
-											 .periods_min = 2,
-											 .periods_max = 2
+		.info_playback = {
+			.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED | SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
+			.formats = SNDRV_PCM_FMTBIT_S32_LE,
+			.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
+								SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 |
+								SNDRV_PCM_RATE_176400 | SNDRV_PCM_RATE_192000),
+			.rate_min = 28000,
+			.rate_max = 216000,
+			.channels_min = 1,
+			.channels_max = 8,
+			.buffer_bytes_max = 2*8*2*4096*4,
+			.period_bytes_min = 16*4,
+			.period_bytes_max = 2048*4*8,
+			.periods_min = 2,
+			.periods_max = 2
 		},
-		.info_capture = { .info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED | SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
-											.formats = SNDRV_PCM_FMTBIT_S32_LE,
-											.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
-																SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 |
-																SNDRV_PCM_RATE_176400 | SNDRV_PCM_RATE_192000),
-											.rate_min = 28000,
-											.rate_max = 216000,
-											.channels_min = 1,
-											.channels_max = 8,
-											.buffer_bytes_max = 2*8*2*4096*4, 
-											.period_bytes_min = 16*4,
-											.period_bytes_max = 2048*4*8,
-											.periods_min = 2,
-											.periods_max = 2
+		.info_capture = {
+			.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED | SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
+			.formats = SNDRV_PCM_FMTBIT_S32_LE,
+			.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
+								SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 |
+								SNDRV_PCM_RATE_176400 | SNDRV_PCM_RATE_192000),
+			.rate_min = 28000,
+			.rate_max = 216000,
+			.channels_min = 1,
+			.channels_max = 8,
+			.buffer_bytes_max = 2*8*2*4096*4, 
+			.period_bytes_min = 16*4,
+			.period_bytes_max = 2048*4*8,
+			.periods_min = 2,
+			.periods_max = 2
 		 }
 	},
-	{ .name = "Seraph M2", 
+	{
+		.name = "Seraph M2", 
 		.speedmode_max = 2,
 		.ch_in = 128,
 		.ch_out = 128, 
@@ -178,33 +184,35 @@ static struct marian_card_descriptor descriptors[7] = {
 		.set_speedmode = marian_m2_set_speedmode,
 		.proc_status = marian_m2_proc_status,
 		.proc_ports = marian_m2_proc_ports,
-		.info_playback = { .info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED | SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
-											 .formats = SNDRV_PCM_FMTBIT_S32_LE | SNDRV_PCM_FMTBIT_S32_BE | SNDRV_PCM_FMTBIT_FLOAT_LE | SNDRV_PCM_FMTBIT_FLOAT_BE,
-											 .rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
-																 SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000),
-											 .rate_min = 28000,
-											 .rate_max = 113000,
-											 .channels_min = 128,
-											 .channels_max = 128,
-											 .buffer_bytes_max = 2*128*2*1024*4,
-											 .period_bytes_min = 16*4,
-											 .period_bytes_max = 1024*4*128,
-											 .periods_min = 2,
-											 .periods_max = 2
+		.info_playback = {
+			.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED | SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
+			.formats = SNDRV_PCM_FMTBIT_S32_LE | SNDRV_PCM_FMTBIT_S32_BE | SNDRV_PCM_FMTBIT_FLOAT_LE | SNDRV_PCM_FMTBIT_FLOAT_BE,
+			.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
+								SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000),
+			.rate_min = 28000,
+			.rate_max = 113000,
+			.channels_min = 128,
+			.channels_max = 128,
+			.buffer_bytes_max = 2*128*2*1024*4,
+			.period_bytes_min = 16*4,
+			.period_bytes_max = 1024*4*128,
+			.periods_min = 2,
+			.periods_max = 2
 		},
-		.info_capture = { .info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED | SNDRV_PCM_INFO_SYNC_START | SNDRV_PCM_INFO_JOINT_DUPLEX ,
-											.formats = SNDRV_PCM_FMTBIT_S32_LE | SNDRV_PCM_FMTBIT_S32_BE | SNDRV_PCM_FMTBIT_FLOAT_LE | SNDRV_PCM_FMTBIT_FLOAT_BE,
-											.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
-																SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000),
-											.rate_min = 28000,
-											.rate_max = 113000,
-											.channels_min = 128,
-											.channels_max = 128,
-											.buffer_bytes_max = 2*128*2*1024*4, 
-											.period_bytes_min = 16*4,
-											.period_bytes_max = 1024*4*128,
-											.periods_min = 2,
-											.periods_max = 2
+		.info_capture = {
+			.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED | SNDRV_PCM_INFO_SYNC_START | SNDRV_PCM_INFO_JOINT_DUPLEX,
+			.formats = SNDRV_PCM_FMTBIT_S32_LE | SNDRV_PCM_FMTBIT_S32_BE | SNDRV_PCM_FMTBIT_FLOAT_LE | SNDRV_PCM_FMTBIT_FLOAT_BE,
+			.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
+								SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000),
+			.rate_min = 28000,
+			.rate_max = 113000,
+			.channels_min = 128,
+			.channels_max = 128,
+			.buffer_bytes_max = 2*128*2*1024*4, 
+			.period_bytes_min = 16*4,
+			.period_bytes_max = 1024*4*128,
+			.periods_min = 2,
+			.periods_max = 2
 		 }
 	}
 };
@@ -222,13 +230,6 @@ static struct marian_card_descriptor descriptors[7] = {
 MODULE_AUTHOR("Florin Faber <faberman@linuxproaudio.org>");
 MODULE_DESCRIPTION("MARIAN Seraph series");
 MODULE_LICENSE("GPL");
-MODULE_SUPPORTED_DEVICE("{{Marian Seraph A3},"
-												"{Marian C-Box},"
-												"{Marian Seraph AD2},"
-												"{Marian Seraph D4},"
-												"{Marian Seraph D8},"
-												"{Marian Seraph 8},"
-												"{Marian Seraph M2}}");
 
 #define PCI_VENDOR_ID_MARIAN            0x1382
 #define PCI_DEVICE_ID_MARIAN_SERAPH_A3  0x4630
@@ -240,7 +241,7 @@ MODULE_SUPPORTED_DEVICE("{{Marian Seraph A3},"
 #define PCI_DEVICE_ID_MARIAN_SERAPH_M2  0x5020
 
 
-static DEFINE_PCI_DEVICE_TABLE(snd_marian_ids) = {
+static const struct pci_device_id snd_marian_ids[] = {
 	{PCI_DEVICE(PCI_VENDOR_ID_MARIAN, PCI_DEVICE_ID_MARIAN_SERAPH_A3),
 	 0, 0, 0},
 	{PCI_DEVICE(PCI_VENDOR_ID_MARIAN, PCI_DEVICE_ID_MARIAN_C_BOX),
@@ -513,13 +514,13 @@ static int snd_marian_create(struct snd_card* card, struct pci_dev *pci, struct 
 	snd_printdd(KERN_INFO "Allocating %d bytes DMA buffer\n", len);
 #endif
 	err = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV,
-														snd_dma_pci_data(pci),
+														&pci->dev,
 														desc->dma_bufsize,
 														&marian->dmabuf);
 	if (err < 0) {
 		snd_printk(KERN_ERR "Could not allocate %d Bytes (%d)\n", len, err);
 		while (snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV,
-															 snd_dma_pci_data(pci),
+															 &pci->dev,
 															 len,
 															 &marian->dmabuf) < 0)
 			len--;

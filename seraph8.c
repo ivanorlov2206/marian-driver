@@ -148,7 +148,7 @@ void marian_seraph8_proc_status(struct marian_card* marian, struct snd_info_buff
 
 	marian_proc_status_generic(marian, buffer);
 
-	buf = marian->dmabuf.area;
+	buf = (uint32_t *) marian->dmabuf.area;
 
 	for (i=0; i<512 ; i++) {
 		if (i%64==0)

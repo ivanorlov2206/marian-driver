@@ -184,7 +184,7 @@ void marian_a3_proc_status(struct marian_card* marian, struct snd_info_buffer* b
 
 	marian_proc_status_generic(marian, buffer);
 
-	buf = marian->dmabuf.area;
+	buf = (uint32_t *) marian->dmabuf.area;
 
 	snd_iprintf(buffer, "Clock source: ");
 	switch (marian->clock_source) {

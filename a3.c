@@ -82,7 +82,7 @@ static int marian_a3_clock_source_put(struct snd_kcontrol *kcontrol, struct snd_
 }
 
 
-static int marian_a3_clock_source_create(struct marian_card* marian, char* label)
+static int marian_a3_clock_source_create(struct marian_card *marian, char *label)
 {
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
@@ -116,7 +116,7 @@ static int marian_a3_clock_source_create(struct marian_card* marian, char* label
  *   - DCO frequency (1/1000th)
  *
  */
-void marian_a3_create_controls(struct marian_card* marian)
+void marian_a3_create_controls(struct marian_card *marian)
 {
 	//marian_a3_sync_state_create(marian, "Input 1 Sync", 0);
 	//marian_a3_sync_state_create(marian, "Input 2 Sync", 1);
@@ -135,7 +135,7 @@ void marian_a3_create_controls(struct marian_card* marian)
 //
 
 
-void marian_a3_prepare(struct marian_card* marian)
+void marian_a3_prepare(struct marian_card *marian)
 {
 	uint32_t mask = 0x00FFFFFF;
 
@@ -150,7 +150,7 @@ void marian_a3_prepare(struct marian_card* marian)
 }
 
 
-int marian_a3_init(struct marian_card* marian) 
+int marian_a3_init(struct marian_card *marian)
 {
 	int err;
 
@@ -158,7 +158,7 @@ int marian_a3_init(struct marian_card* marian)
 
 	err = marian_generic_init(marian);
 
-	if (err!=0)
+	if (err != 0)
 		return err;
 
 	// ADAT TX enable
@@ -168,17 +168,17 @@ int marian_a3_init(struct marian_card* marian)
 }
 
 
-void marian_a3_proc_ports(struct marian_card* marian, struct snd_info_buffer *buffer, unsigned int type)
+void marian_a3_proc_ports(struct marian_card *marian, struct snd_info_buffer *buffer, unsigned int type)
 {
 	int i;
-	for (i=0; i<=23; i++)
-		snd_iprintf(buffer, "%d=ADAT p%dch%02d\n", i+1, i/8+1, i%8+1);
+	for (i = 0; i <= 23; i++)
+		snd_iprintf(buffer, "%d=ADAT p%dch%02d\n", i + 1, i / 8 + 1, i % 8 + 1);
 }
 
 
-void marian_a3_proc_status(struct marian_card* marian, struct snd_info_buffer* buffer)
+void marian_a3_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)
 {
-	uint32_t* buf;
+	uint32_t *buf;
 	unsigned int i;
 
 	marian_proc_status_generic(marian, buffer);
@@ -187,27 +187,38 @@ void marian_a3_proc_status(struct marian_card* marian, struct snd_info_buffer* b
 
 	snd_iprintf(buffer, "Clock source: ");
 	switch (marian->clock_source) {
-	case 1: snd_iprintf(buffer, "Internal DCO\n"); break;
-	case 2: snd_iprintf(buffer, "Sync bus\n"); break;
-	case 4: snd_iprintf(buffer, "ADAT Input 1\n"); break;
-	case 5: snd_iprintf(buffer, "ADAT Input 2\n"); break;
-	case 6: snd_iprintf(buffer, "ADAT Input 3\n"); break;
+	case 1:
+		snd_iprintf(buffer, "Internal DCO\n");
+		break;
+	case 2:
+		snd_iprintf(buffer, "Sync bus\n");
+		break;
+	case 4:
+		snd_iprintf(buffer, "ADAT Input 1\n");
+		break;
+	case 5:
+		snd_iprintf(buffer, "ADAT Input 2\n");
+		break;
+	case 6:
+		snd_iprintf(buffer, "ADAT Input 3\n");
+		break;
 	default:
-		snd_iprintf(buffer, "UNKNOWN\n"); break;
+		snd_iprintf(buffer, "UNKNOWN\n");
+		break;
 	}
 
-	for (i=1; i<=3; i++) {
-		snd_iprintf(buffer, "ADAT port %u input: %u Hz\n", i, marian_measure_freq(marian, 3+i));
+	for (i = 1; i <= 3; i++) {
+		snd_iprintf(buffer, "ADAT port %u input: %u Hz\n", i, marian_measure_freq(marian, 3 + i));
 	}
 
 
-	for (i=0; i<512; i++) {
-		if (i%64==0)
+	for (i = 0; i < 512; i++) {
+		if (i % 64 == 0)
 			snd_iprintf(buffer, "\n% 4dK:\t", i);
-		else if (i%8==0)
+		else if (i % 8 == 0)
 			snd_iprintf(buffer, " ");
 
-		snd_iprintf(buffer, ((*buf)>0)?"X":"0");
+		snd_iprintf(buffer, (*buf > 0) ? "X" : "0");
 		buf += 256;
 	}
 }

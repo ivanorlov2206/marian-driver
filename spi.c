@@ -13,8 +13,8 @@
 				}
 
 
-int marian_spi_transfer(struct marian_card* marian, uint16_t cs, uint16_t bits_write,
-			uint8_t* data_write, uint16_t bits_read, uint8_t* data_read)
+int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_write,
+			uint8_t *data_write, uint16_t bits_read, uint8_t *data_read)
 {
 	int tries = 10;
 	uint32_t buf = 0;
@@ -37,9 +37,9 @@ int marian_spi_transfer(struct marian_card* marian, uint16_t cs, uint16_t bits_w
 
 	if (bits_write <= 32) {
 		if (bits_write <= 8)
-			buf = data_write[0]<<(32-bits_write);
-		else if (bits_write<=16)
-			buf = data_write[0]<<24 | data_write[1]<<(32-bits_write);
+			buf = data_write[0] << (32 - bits_write);
+		else if (bits_write <= 16)
+			buf = data_write[0] << 24 | data_write[1] << (32 - bits_write);
 
 		//snd_printk(KERN_INFO "marian_spi_transfer: Writing %d bits, 0x%08x\n", bits_write, buf);
 

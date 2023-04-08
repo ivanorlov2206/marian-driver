@@ -20,7 +20,8 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 	uint32_t buf = 0;
 	unsigned int i;
 
-	MDEBUG("spi_transfer(.., 0x%04x, %u, [%02x, %02x], %u, ..)\n", cs, bits_write, data_write[0], data_write[1], bits_read);
+	MDEBUG("spi_transfer(.., 0x%04x, %u, [%02x, %02x], %u, ..)\n", cs, bits_write,
+				data_write[0], data_write[1], bits_read);
 
 	SPI_WAIT_FOR_AR(tries);
 	if (tries == 0) {

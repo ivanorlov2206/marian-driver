@@ -14,9 +14,11 @@
 //
 
 
-static int marian_a3_clock_source_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
+static int marian_a3_clock_source_info(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_info *uinfo)
 {
-	static char *texts[] = { "Internal", "Sync Bus", "ADAT Input 1", "ADAT Input 2", "ADAT Input 3" };
+	static char *texts[] = { "Internal", "Sync Bus", "ADAT Input 1",
+				"ADAT Input 2", "ADAT Input 3" };
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
 	uinfo->value.enumerated.items = 5;
@@ -27,7 +29,8 @@ static int marian_a3_clock_source_info(struct snd_kcontrol *kcontrol, struct snd
 }
 
 
-static int marian_a3_clock_source_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_a3_clock_source_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -48,7 +51,8 @@ static int marian_a3_clock_source_get(struct snd_kcontrol *kcontrol, struct snd_
 		ucontrol->value.enumerated.item[0] = 4;
 		break;
 	default:
-		snd_printk(KERN_INFO "marian_a3_clock_source_get: Illegal value for clock_source! (%d)\n", marian->clock_source);
+		snd_printk(KERN_INFO "marian_a3_clock_source_get: Illegal value for clock_source! (%d)\n",
+				marian->clock_source);
 		return -1;
 	}
 
@@ -56,7 +60,8 @@ static int marian_a3_clock_source_get(struct snd_kcontrol *kcontrol, struct snd_
 }
 
 
-static int marian_a3_clock_source_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_a3_clock_source_put(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -168,7 +173,8 @@ int marian_a3_init(struct marian_card *marian)
 }
 
 
-void marian_a3_proc_ports(struct marian_card *marian, struct snd_info_buffer *buffer, unsigned int type)
+void marian_a3_proc_ports(struct marian_card *marian, struct snd_info_buffer *buffer,
+				unsigned int type)
 {
 	int i;
 	for (i = 0; i <= 23; i++)
@@ -207,9 +213,9 @@ void marian_a3_proc_status(struct marian_card *marian, struct snd_info_buffer *b
 		break;
 	}
 
-	for (i = 1; i <= 3; i++) {
-		snd_iprintf(buffer, "ADAT port %u input: %u Hz\n", i, marian_measure_freq(marian, 3 + i));
-	}
+	for (i = 1; i <= 3; i++)
+		snd_iprintf(buffer, "ADAT port %u input: %u Hz\n",
+				i, marian_measure_freq(marian, 3 + i));
 
 
 	for (i = 0; i < 512; i++) {

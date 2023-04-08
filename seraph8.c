@@ -15,7 +15,8 @@
 //
 
 
-static int marian_seraph8_clock_source_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
+static int marian_seraph8_clock_source_info(struct snd_kcontrol *kcontrol,
+						struct snd_ctl_elem_info *uinfo)
 {
 	static char *texts[] = { "Internal", "Sync Bus" };
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
@@ -28,7 +29,8 @@ static int marian_seraph8_clock_source_info(struct snd_kcontrol *kcontrol, struc
 }
 
 
-static int marian_seraph8_clock_source_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_seraph8_clock_source_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -40,7 +42,8 @@ static int marian_seraph8_clock_source_get(struct snd_kcontrol *kcontrol, struct
 		ucontrol->value.enumerated.item[0] = 1;
 		break;
 	default:
-		snd_printk(KERN_INFO "marian_seraph8_clock_source_get: Illegal value for clock_source! (%d)\n", marian->clock_source);
+		snd_printk(KERN_INFO "marian_seraph8_clock_source_get: Illegal value for clock_source! (%d)\n",
+			marian->clock_source);
 		return -1;
 	}
 
@@ -48,7 +51,8 @@ static int marian_seraph8_clock_source_get(struct snd_kcontrol *kcontrol, struct
 }
 
 
-static int marian_seraph8_clock_source_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_seraph8_clock_source_put(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 

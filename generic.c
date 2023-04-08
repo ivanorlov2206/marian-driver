@@ -31,13 +31,15 @@ unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source
 	//snd_printk(KERN_INFO "measure_freq(%d) got 0x%08x (%d Hz) after %d tries\n", source, val, 1280000000/((val & 0x3FFFF)+1), 5-tries);
 
 	if (tries>0)
-		return (((1280000000 / ((val & 0x3FFFF) + 1)) + 5 * marian->speedmode) / (10 * marian->speedmode)) * 10 * marian->speedmode;
+		return (((1280000000 / ((val & 0x3FFFF) + 1)) + 5 * marian->speedmode)
+		/ (10 * marian->speedmode)) * 10 * marian->speedmode;
 
 	return 0;
 }
 
 
-static int marian_generic_frequency_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
+static int marian_generic_frequency_info(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_info *uinfo)
 {
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->count = 1;
@@ -48,7 +50,8 @@ static int marian_generic_frequency_info(struct snd_kcontrol *kcontrol, struct s
 }
 
 
-static int marian_generic_frequency_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_frequency_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -106,7 +109,8 @@ void marian_generic_set_dco(struct marian_card *marian, unsigned int freq, unsig
 }
 
 
-static int marian_generic_dco_int_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
+static int marian_generic_dco_int_info(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_info *uinfo)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -121,7 +125,8 @@ static int marian_generic_dco_int_info(struct snd_kcontrol *kcontrol, struct snd
 }
 
 
-static int marian_generic_dco_int_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_dco_int_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -131,7 +136,8 @@ static int marian_generic_dco_int_get(struct snd_kcontrol *kcontrol, struct snd_
 }
 
 
-static int marian_generic_dco_int_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_dco_int_put(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -155,7 +161,8 @@ int marian_generic_dco_int_create(struct marian_card *marian, char *label)
 }
 
 
-static int marian_generic_dco_millis_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
+static int marian_generic_dco_millis_info(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_info *uinfo)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -169,7 +176,8 @@ static int marian_generic_dco_millis_info(struct snd_kcontrol *kcontrol, struct 
 }
 
 
-static int marian_generic_dco_millis_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_dco_millis_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -179,7 +187,8 @@ static int marian_generic_dco_millis_get(struct snd_kcontrol *kcontrol, struct s
 }
 
 
-static int marian_generic_dco_millis_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_dco_millis_put(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -203,7 +212,8 @@ int marian_generic_dco_millis_create(struct marian_card *marian, char *label) {
 }
 
 
-static int marian_generic_dco_detune_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
+static int marian_generic_dco_detune_info(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_info *uinfo)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -216,7 +226,8 @@ static int marian_generic_dco_detune_info(struct snd_kcontrol *kcontrol, struct 
 }
 
 
-static int marian_generic_dco_detune_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_dco_detune_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -226,7 +237,8 @@ static int marian_generic_dco_detune_get(struct snd_kcontrol *kcontrol, struct s
 }
 
 
-static int marian_generic_dco_detune_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_dco_detune_put(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -321,15 +333,21 @@ void marian_proc_status_generic(struct marian_card *marian, struct snd_info_buff
 	snd_iprintf(buffer, "RD 0x064: %08x (SPI bits written)\n", readl(marian->iobase + 0x64));
 	snd_iprintf(buffer, "RD 0x068: %08x (SPI bits read)\n", readl(marian->iobase + 0x68));
 	snd_iprintf(buffer, "RD 0x070: %08x (SPI bits status)\n", readl(marian->iobase + 0x70));
-	snd_iprintf(buffer, "RD 0x088: %08x (Super clock measurement)\n", readl(marian->iobase + 0x88));
-	snd_iprintf(buffer, "RD 0x08C: %08x (HW Pointer)\n", readl(marian->iobase + SERAPH_RD_HWPOINTER));
-	snd_iprintf(buffer, "RD 0x094: %08x (Word clock measurement)\n", readl(marian->iobase + 0x88));
-	snd_iprintf(buffer, "RD 0x0F8: %08x (Extension board)\n", readl(marian->iobase + 0xF8));
-	snd_iprintf(buffer, "RD 0x244: %08x (DMA debug)\n", readl(marian->iobase + 0x244));
+	snd_iprintf(buffer, "RD 0x088: %08x (Super clock measurement)\n",
+					readl(marian->iobase + 0x88));
+	snd_iprintf(buffer, "RD 0x08C: %08x (HW Pointer)\n",
+					readl(marian->iobase + SERAPH_RD_HWPOINTER));
+	snd_iprintf(buffer, "RD 0x094: %08x (Word clock measurement)\n",
+					readl(marian->iobase + 0x88));
+	snd_iprintf(buffer, "RD 0x0F8: %08x (Extension board)\n",
+					readl(marian->iobase + 0xF8));
+	snd_iprintf(buffer, "RD 0x244: %08x (DMA debug)\n",
+					readl(marian->iobase + 0x244));
 
 	snd_iprintf(buffer, "\n*** Card status\n");
 	snd_iprintf(buffer, "Firmware build: %08x\n", readl(marian->iobase + 0xFC));
-	snd_iprintf(buffer, "Speed mode   : %uFS (1..%u)\n", marian->speedmode, marian->desc->speedmode_max);
+	snd_iprintf(buffer, "Speed mode   : %uFS (1..%u)\n",
+					marian->speedmode, marian->desc->speedmode_max);
 	snd_iprintf(buffer, "Clock master : %s\n", (marian->clock_source==1)?"yes":"no");
 	snd_iprintf(buffer, "DCO frequency: %d.%d Hz\n", marian->dco, marian->dco_millis);
 	snd_iprintf(buffer, "DCO detune   : %d Cent\n", marian->detune);
@@ -342,7 +360,8 @@ void marian_proc_status_generic(struct marian_card *marian, struct snd_info_buff
  * port_names of the card descriptor regardless of current
  * speed mode and wether input or output ports are requested.
  **/
-void marian_proc_ports_generic(struct marian_card *marian, struct snd_info_buffer *buffer, unsigned int type)
+void marian_proc_ports_generic(struct marian_card *marian, struct snd_info_buffer *buffer,
+				unsigned int type)
 {
 	snd_iprintf(buffer, marian->desc->port_names);
 }
@@ -384,7 +403,8 @@ void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speed
 }
 
 
-static int marian_generic_speedmode_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
+static int marian_generic_speedmode_info(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_info *uinfo)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 	static char *texts[] = { "1FS", "2FS", "4FS" };
@@ -408,7 +428,8 @@ static int marian_generic_speedmode_info(struct snd_kcontrol *kcontrol, struct s
 }
 
 
-static int marian_generic_speedmode_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_speedmode_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -421,7 +442,8 @@ static int marian_generic_speedmode_get(struct snd_kcontrol *kcontrol, struct sn
 }
 
 
-static int marian_generic_speedmode_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_speedmode_put(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 

@@ -105,7 +105,7 @@ static int marian_m2_spi_write(struct marian_card *marian, uint8_t adr, uint8_t 
 	buf_out[0] = 0x80 | adr;
 	buf_out[1] = val;
 
-	return marian_spi_transfer(marian, 0x02, 16, (uint8_t*) &buf_out, 0, NULL);
+	return marian_spi_transfer(marian, 0x02, 16, (uint8_t *) &buf_out, 0, NULL);
 }
 
 
@@ -124,6 +124,7 @@ static int marian_m2_spi_write(struct marian_card *marian, uint8_t adr, uint8_t 
 static int marian_m2_sync_state_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
 {
 	static char *texts[] = { "No Signal", "Lock", "Sync" };
+
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
 	uinfo->value.enumerated.items = 3;
@@ -169,6 +170,7 @@ static int marian_m2_channel_mode_info(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_info *uinfo)
 {
 	static char *texts[] = { "56ch", "64ch" };
+
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
 	uinfo->value.enumerated.items = 2;
@@ -211,6 +213,7 @@ static int marian_m2_input_channel_mode_create(struct marian_card *marian,
 static int marian_m2_frame_mode_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
 {
 	static char *texts[] = { "48kHz", "96kHz" };
+
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
 	uinfo->value.enumerated.items = 2;
@@ -311,7 +314,7 @@ static int marian_m2_output_frame_mode_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-	struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
+	struct m2_specific *spec = (struct m2_specific *) marian->card_specific;
 
 	ucontrol->value.enumerated.item[0] = (spec->frame>>kcontrol->private_value)&1;
 
@@ -323,6 +326,7 @@ static int marian_m2_output_frame_mode_put(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
+
 	MDEBUG("marian_m2_output_frame_mode_put(%d) -> %d\n",
 		kcontrol->private_value, ucontrol->value.enumerated.item[0]);
 
@@ -353,6 +357,7 @@ static int marian_m2_clock_source_info(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_info *uinfo)
 {
 	static char *texts[] = { "Internal", "Sync Bus", "Input Port 1", "Input Port 2" };
+
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
 	uinfo->value.enumerated.items = 4;
@@ -396,7 +401,7 @@ static int marian_m2_clock_source_put(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
-	switch(ucontrol->value.enumerated.item[0]) {
+	switch (ucontrol->value.enumerated.item[0]) {
 	case 0: // DCO
 		marian_generic_set_clock_source(marian, 1);
 		break;
@@ -480,7 +485,7 @@ void marian_m2_create_controls(struct marian_card *marian)
  **/
 static void marian_m2_set_pll(struct marian_card *marian, uint8_t state)
 {
-	struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
+	struct m2_specific *spec = (struct m2_specific *) marian->card_specific;
 
 	spec->shadow_40 = (spec->shadow_40 & ~(1 << M2_PLL)) | state << M2_PLL;
 	marian_m2_spi_write(marian, 0x40, spec->shadow_40);
@@ -489,7 +494,7 @@ static void marian_m2_set_pll(struct marian_card *marian, uint8_t state)
 
 static void marian_m2_enable_tx(struct marian_card *marian, uint8_t state)
 {
-	struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
+	struct m2_specific *spec = (struct m2_specific *) marian->card_specific;
 
 	spec->shadow_41 = (spec->shadow_41 & ~(1 << M2_TX_ENABLE)) | state << M2_TX_ENABLE;
 	marian_m2_spi_write(marian, 0x41, spec->shadow_41);
@@ -501,7 +506,7 @@ static void marian_m2_enable_tx(struct marian_card *marian, uint8_t state)
  **/
 static void marian_m2_set_float(struct marian_card *marian, uint8_t state)
 {
-	struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
+	struct m2_specific *spec = (struct m2_specific *) marian->card_specific;
 
 	spec->shadow_41 = (spec->shadow_41 & ~(1 << M2_INT_FLOAT)) | state << M2_INT_FLOAT;
 	marian_m2_spi_write(marian, 0x41, spec->shadow_41);
@@ -513,7 +518,7 @@ static void marian_m2_set_float(struct marian_card *marian, uint8_t state)
  **/
 static void marian_m2_set_endianness(struct marian_card *marian, uint8_t state)
 {
-	struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
+	struct m2_specific *spec = (struct m2_specific *) marian->card_specific;
 
 	spec->shadow_41 = (spec->shadow_41 & ~(1 << M2_ENDIANNESS)) | state << M2_ENDIANNESS;
 	marian_m2_spi_write(marian, 0x41, spec->shadow_41);
@@ -525,7 +530,7 @@ static void marian_m2_set_endianness(struct marian_card *marian, uint8_t state)
  **/
 static void marian_m2_set_bit_order(struct marian_card *marian, uint8_t state)
 {
-	struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
+	struct m2_specific *spec = (struct m2_specific *) marian->card_specific;
 
 	spec->shadow_41 = (spec->shadow_41 & ~(1 << M2_BIT_ORDER)) | state << M2_BIT_ORDER;
 	marian_m2_spi_write(marian, 0x41, spec->shadow_41);
@@ -534,7 +539,8 @@ static void marian_m2_set_bit_order(struct marian_card *marian, uint8_t state)
 
 static void marian_m2_set_port_mode(struct marian_card *marian, unsigned int port, uint8_t state)
 {
-	struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
+	struct m2_specific *spec = (struct m2_specific *) marian->card_specific;
+
 	if (port)
 		spec->shadow_42 = (spec->shadow_42 & ~(1 << M2_PORT2_MODE))
 				| state << M2_PORT2_MODE;
@@ -548,7 +554,8 @@ static void marian_m2_set_port_mode(struct marian_card *marian, unsigned int por
 
 static uint8_t marian_m2_get_port_mode(struct marian_card *marian, unsigned int port)
 {
-	struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
+	struct m2_specific *spec = (struct m2_specific *) marian->card_specific;
+
 	if (port)
 		return (spec->shadow_42 >> M2_PORT2_MODE) & 1;
 	else
@@ -558,7 +565,7 @@ static uint8_t marian_m2_get_port_mode(struct marian_card *marian, unsigned int 
 
 static void marian_m2_write_port_frame(struct marian_card *marian)
 {
-	struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
+	struct m2_specific *spec = (struct m2_specific *) marian->card_specific;
 
 	spec->shadow_42 = spec->shadow_42 & ~((1 << M2_PORT1_FRAME) | (1 << M2_PORT2_FRAME));
 
@@ -576,7 +583,7 @@ static void marian_m2_write_port_frame(struct marian_card *marian)
 
 static void marian_m2_set_port_frame(struct marian_card *marian, unsigned int port, uint8_t state)
 {
-	struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
+	struct m2_specific *spec = (struct m2_specific *) marian->card_specific;
 
 	spec->frame = (spec->frame & ~(1 << port)) | (state << port);
 
@@ -586,7 +593,8 @@ static void marian_m2_set_port_frame(struct marian_card *marian, unsigned int po
 
 static uint8_t marian_m2_get_port_frame(struct marian_card *marian, unsigned int port)
 {
-	struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
+	struct m2_specific *spec = (struct m2_specific *) marian->card_specific;
+
 	if (port)
 		return (spec->shadow_42>>M2_PORT2_FRAME) & 1;
 	else
@@ -605,11 +613,12 @@ int marian_m2_init(struct marian_card *marian)
 {
 	int err;
 	struct m2_specific *spec;
+
 	MDEBUG("marian_m2_init()\n");
 
 	err = marian_generic_init(marian);
 
-	if (err!=0)
+	if (err != 0)
 		return err;
 
 	spec = kzalloc(sizeof(struct m2_specific), GFP_KERNEL);
@@ -666,7 +675,7 @@ void marian_m2_prepare(struct marian_card *marian)
 
 void marian_m2_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)
 {
-	struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
+	struct m2_specific *spec = (struct m2_specific *) marian->card_specific;
 	uint8_t v1, v2;
 #ifdef DEBUG
 	uint32_t *buf;
@@ -735,9 +744,9 @@ void marian_m2_proc_status(struct marian_card *marian, struct snd_info_buffer *b
 	buf = marian->dmabuf.area;
 
 	for (i = 0; i < 2048; i++) {
-		if (i % 64==0)
+		if (i % 64 == 0)
 			snd_iprintf(buffer, "\n% 4dK:\t", i);
-		else if (i % 8==0)
+		else if (i % 8 == 0)
 			snd_iprintf(buffer, " ");
 
 		snd_iprintf(buffer, (*buf > 0) ? "X" : " ");
@@ -751,12 +760,14 @@ void marian_m2_proc_ports(struct marian_card *marian,
 			struct snd_info_buffer *buffer, unsigned int type)
 {
 	int i;
-	for (i=0; i < 128; i++)
+
+	for (i = 0; i < 128; i++)
 		snd_iprintf(buffer, "%d=MADI p%dch%02d\n", i + 1, i / 64 + 1, i % 64 + 1);
 }
 
 void marian_m2_constraints(struct marian_card *marian, struct snd_pcm_substream *substream,
-				struct snd_pcm_hw_params *params) {
+				struct snd_pcm_hw_params *params)
+{
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_FLOAT_BE:

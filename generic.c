@@ -19,7 +19,7 @@ unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source
 
 	WRITEL(source & 0x7, marian->iobase + 0xC8);
 
-	while (tries>0) {
+	while (tries > 0) {
 		val = readl(marian->iobase + 0x94);
 		if (val & 0x80000000)
 			break;
@@ -30,7 +30,7 @@ unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source
 
 	//snd_printk(KERN_INFO "measure_freq(%d) got 0x%08x (%d Hz) after %d tries\n", source, val, 1280000000/((val & 0x3FFFF)+1), 5-tries);
 
-	if (tries>0)
+	if (tries > 0)
 		return (((1280000000 / ((val & 0x3FFFF) + 1)) + 5 * marian->speedmode)
 		/ (10 * marian->speedmode)) * 10 * marian->speedmode;
 
@@ -198,7 +198,8 @@ static int marian_generic_dco_millis_put(struct snd_kcontrol *kcontrol,
 }
 
 
-int marian_generic_dco_millis_create(struct marian_card *marian, char *label) {
+int marian_generic_dco_millis_create(struct marian_card *marian, char *label)
+{
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name = label,
@@ -348,7 +349,7 @@ void marian_proc_status_generic(struct marian_card *marian, struct snd_info_buff
 	snd_iprintf(buffer, "Firmware build: %08x\n", readl(marian->iobase + 0xFC));
 	snd_iprintf(buffer, "Speed mode   : %uFS (1..%u)\n",
 					marian->speedmode, marian->desc->speedmode_max);
-	snd_iprintf(buffer, "Clock master : %s\n", (marian->clock_source==1)?"yes":"no");
+	snd_iprintf(buffer, "Clock master : %s\n", (marian->clock_source == 1) ? "yes" : "no");
 	snd_iprintf(buffer, "DCO frequency: %d.%d Hz\n", marian->dco, marian->dco_millis);
 	snd_iprintf(buffer, "DCO detune   : %d Cent\n", marian->detune);
 }
@@ -377,7 +378,7 @@ void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speed
 {
 	snd_printdd(KERN_ERR "marian_generic_set_speedmode(.., %u)\n", speedmode);
 
-	if (speedmode>marian->desc->speedmode_max)
+	if (speedmode > marian->desc->speedmode_max)
 		return;
 
 	switch (speedmode) {
@@ -408,6 +409,7 @@ static int marian_generic_speedmode_info(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 	static char *texts[] = { "1FS", "2FS", "4FS" };
+
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
 	switch (marian->desc->speedmode_max) {

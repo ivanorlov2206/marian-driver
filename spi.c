@@ -3,14 +3,14 @@
 
 
 #define SPI_WAIT_FOR_AR(tries) { \
-					tries = 10; \
-					while (tries>0) { \
-						if (readl(marian->iobase + 0x70) == 0x80000000) \
-							break; \
-						msleep(1); \
-						tries--; \
-					} \
-				}
+			tries = 10; \
+			while (tries > 0) { \
+				if (readl(marian->iobase + 0x70) == 0x80000000) \
+					break; \
+				msleep(1); \
+				tries--; \
+			} \
+		}
 
 
 int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_write,

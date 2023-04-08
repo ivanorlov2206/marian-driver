@@ -19,6 +19,7 @@ static int marian_seraph8_clock_source_info(struct snd_kcontrol *kcontrol,
 						struct snd_ctl_elem_info *uinfo)
 {
 	static char *texts[] = { "Internal", "Sync Bus" };
+
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
 	uinfo->value.enumerated.items = 2;
@@ -56,7 +57,7 @@ static int marian_seraph8_clock_source_put(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
-	switch(ucontrol->value.enumerated.item[0]) {
+	switch (ucontrol->value.enumerated.item[0]) {
 	case 0: // DCO
 		marian_generic_set_clock_source(marian, 1);
 		break;
@@ -95,9 +96,9 @@ void marian_seraph8_create_controls(struct marian_card *marian)
 void marian_seraph8_prepare(struct marian_card *marian)
 {
 	// MARIAN-AH:
-  // uint32_t mask = 0xFF000000;
-  // Transfer enable Bits for all Analog Channels
-  uint32_t mask = 0x000000FF;
+	// uint32_t mask = 0xFF000000;
+	// Transfer enable Bits for all Analog Channels
+	uint32_t mask = 0x000000FF;
 
 	snd_printdd(KERN_INFO "marian_seraph8_prepare()\n");
 
@@ -105,7 +106,6 @@ void marian_seraph8_prepare(struct marian_card *marian)
 
 	WRITEL(mask, marian->iobase + 0x08);
 	WRITEL(mask, marian->iobase + 0x0C);
-
 }
 
 
@@ -132,12 +132,12 @@ void marian_seraph8_init_codec(struct marian_card *marian)
 	buf_out[0] = 0xA1;
 	buf_out[1] = 0x03;
 
-	marian_spi_transfer(marian, 0x1E, 16, (uint8_t*) &buf_out, 0, NULL);
+	marian_spi_transfer(marian, 0x1E, 16, (uint8_t *) &buf_out, 0, NULL);
 
 	buf_out[0] = 0xA2;
 	buf_out[1] = 0x4D;
 
-	marian_spi_transfer(marian, 0x1E, 16, (uint8_t*) &buf_out, 0, NULL);
+	marian_spi_transfer(marian, 0x1E, 16, (uint8_t *) &buf_out, 0, NULL);
 
 	// switch input mute off
 	WRITEL(0x0, marian->iobase + 0x18);

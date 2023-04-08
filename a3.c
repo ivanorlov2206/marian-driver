@@ -65,7 +65,7 @@ static int marian_a3_clock_source_put(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
-	switch(ucontrol->value.enumerated.item[0]) {
+	switch (ucontrol->value.enumerated.item[0]) {
 	case 0: // DCO
 		marian_generic_set_clock_source(marian, 1);
 		break;
@@ -177,6 +177,7 @@ void marian_a3_proc_ports(struct marian_card *marian, struct snd_info_buffer *bu
 				unsigned int type)
 {
 	int i;
+
 	for (i = 0; i <= 23; i++)
 		snd_iprintf(buffer, "%d=ADAT p%dch%02d\n", i + 1, i / 8 + 1, i % 8 + 1);
 }

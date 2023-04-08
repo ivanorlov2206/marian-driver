@@ -16,7 +16,7 @@
 #include <sound/info.h>
 
 #ifdef DEBUG
-#define MDEBUG(format, args...) snd_printdd(KERN_INFO format, ## args);
+#define MDEBUG(format, args...) snd_printdd(KERN_INFO format, ## args)
 #else
 #define MDEBUG(format, args...)
 #endif
@@ -25,16 +25,16 @@ struct marian_card;
 struct marian_card_descriptor;
 
 
-typedef void (*marian_hw_constraints_func)(struct marian_card*, struct snd_pcm_substream*,
-		struct snd_pcm_hw_params*);
-typedef void (*marian_controls_func)(struct marian_card*);
-typedef int (*marian_init_func)(struct marian_card*);
-typedef void (*marian_free_func)(struct marian_card*);
-typedef void (*marian_prepare_func)(struct marian_card*);
-typedef void (*marian_init_codec_func)(struct marian_card*);
-typedef void (*marian_set_speedmode_func)(struct marian_card*, unsigned int speedmode);
-typedef void (*marian_proc_status_func)(struct marian_card*, struct snd_info_buffer *buffer);
-typedef void (*marian_proc_ports_func)(struct marian_card*, struct snd_info_buffer *buffer,
+typedef void (*marian_hw_constraints_func)(struct marian_card *marian,
+		struct snd_pcm_substream *substream, struct snd_pcm_hw_params *params);
+typedef void (*marian_controls_func)(struct marian_card *marian);
+typedef int (*marian_init_func)(struct marian_card *marian);
+typedef void (*marian_free_func)(struct marian_card *marian);
+typedef void (*marian_prepare_func)(struct marian_card *marian);
+typedef void (*marian_init_codec_func)(struct marian_card *marian);
+typedef void (*marian_set_speedmode_func)(struct marian_card *marian, unsigned int speedmode);
+typedef void (*marian_proc_status_func)(struct marian_card *marian, struct snd_info_buffer *buffer);
+typedef void (*marian_proc_ports_func)(struct marian_card *marian, struct snd_info_buffer *buffer,
 					unsigned int type);
 
 #define WRITEL(val, adr) { \

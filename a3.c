@@ -14,8 +14,7 @@
 //
 
 
-static int marian_a3_clock_source_info(struct snd_kcontrol *kcontrol,
-																			 struct snd_ctl_elem_info *uinfo)
+static int marian_a3_clock_source_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
 {
 	static char *texts[] = { "Internal", "Sync Bus", "ADAT Input 1", "ADAT Input 2", "ADAT Input 3" };
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
@@ -28,13 +27,12 @@ static int marian_a3_clock_source_info(struct snd_kcontrol *kcontrol,
 }
 
 
-static int marian_a3_clock_source_get(struct snd_kcontrol *kcontrol,
-																			struct snd_ctl_elem_value *ucontrol)
+static int marian_a3_clock_source_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	switch (marian->clock_source) {
-	case 1: 
+	case 1:
 		ucontrol->value.enumerated.item[0] = 0;
 		break;
 	case 2:
@@ -58,8 +56,8 @@ static int marian_a3_clock_source_get(struct snd_kcontrol *kcontrol,
 }
 
 
-static int marian_a3_clock_source_put(struct snd_kcontrol *kcontrol,
-																			struct snd_ctl_elem_value *ucontrol) {
+static int marian_a3_clock_source_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	switch(ucontrol->value.enumerated.item[0]) {
@@ -84,7 +82,8 @@ static int marian_a3_clock_source_put(struct snd_kcontrol *kcontrol,
 }
 
 
-static int	marian_a3_clock_source_create(struct marian_card* marian, char* label) {
+static int marian_a3_clock_source_create(struct marian_card* marian, char* label)
+{
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name = label,
@@ -117,7 +116,8 @@ static int	marian_a3_clock_source_create(struct marian_card* marian, char* label
  *   - DCO frequency (1/1000th)
  *
  */
-void marian_a3_create_controls(struct marian_card* marian) {
+void marian_a3_create_controls(struct marian_card* marian)
+{
 	//marian_a3_sync_state_create(marian, "Input 1 Sync", 0);
 	//marian_a3_sync_state_create(marian, "Input 2 Sync", 1);
 	//marian_a3_sync_state_create(marian, "Input 3 Sync", 2);
@@ -135,11 +135,11 @@ void marian_a3_create_controls(struct marian_card* marian) {
 //
 
 
-void marian_a3_prepare(struct marian_card* marian) 
+void marian_a3_prepare(struct marian_card* marian)
 {
 	uint32_t mask = 0x00FFFFFF;
 
-	snd_printdd(KERN_INFO "marian_a3_prepare()\n");
+	MDEBUG("marian_a3_prepare()\n");
 
 	// arm channels
 	WRITEL(mask, marian->iobase + 0x08);
@@ -154,7 +154,7 @@ int marian_a3_init(struct marian_card* marian)
 {
 	int err;
 
-	snd_printdd(KERN_ERR "marian_a3_init()\n");
+	MDEBUG("marian_a3_init()\n");
 
 	err = marian_generic_init(marian);
 
@@ -168,9 +168,7 @@ int marian_a3_init(struct marian_card* marian)
 }
 
 
-void marian_a3_proc_ports(struct marian_card* marian, 
-													struct snd_info_buffer *buffer, 
-													unsigned int type) 
+void marian_a3_proc_ports(struct marian_card* marian, struct snd_info_buffer *buffer, unsigned int type)
 {
 	int i;
 	for (i=0; i<=23; i++)
@@ -178,7 +176,8 @@ void marian_a3_proc_ports(struct marian_card* marian,
 }
 
 
-void marian_a3_proc_status(struct marian_card* marian, struct snd_info_buffer* buffer) {
+void marian_a3_proc_status(struct marian_card* marian, struct snd_info_buffer* buffer)
+{
 	uint32_t* buf;
 	unsigned int i;
 

@@ -12,7 +12,8 @@
  * has only a certainty of 10-20Hz, this function rounds it up
  * to the nearest 10Hz step (in 1FS).
  **/
-unsigned int marian_measure_freq(struct marian_card* marian, unsigned int source) {
+unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source)
+{
 	uint32_t val;
 	int tries = 5;
 
@@ -20,7 +21,7 @@ unsigned int marian_measure_freq(struct marian_card* marian, unsigned int source
 
 	while (tries>0) {
 		val = readl(marian->iobase + 0x94);
-		if (val&0x80000000)
+		if (val & 0x80000000)
 			break;
 
 		msleep(1);
@@ -30,14 +31,13 @@ unsigned int marian_measure_freq(struct marian_card* marian, unsigned int source
 	//snd_printk(KERN_INFO "measure_freq(%d) got 0x%08x (%d Hz) after %d tries\n", source, val, 1280000000/((val & 0x3FFFF)+1), 5-tries);
 
 	if (tries>0)
-		return (((1280000000/((val & 0x3FFFF)+1))+5*marian->speedmode)/(10*marian->speedmode))*10*marian->speedmode;
+		return (((1280000000 / ((val & 0x3FFFF) + 1)) + 5 * marian->speedmode) / (10 * marian->speedmode)) * 10 * marian->speedmode;
 
 	return 0;
 }
 
 
-static int marian_generic_frequency_info(struct snd_kcontrol *kcontrol,
-																	struct snd_ctl_elem_info *uinfo)
+static int marian_generic_frequency_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
 {
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->count = 1;
@@ -48,8 +48,7 @@ static int marian_generic_frequency_info(struct snd_kcontrol *kcontrol,
 }
 
 
-static int marian_generic_frequency_get(struct snd_kcontrol *kcontrol,
-																					struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_frequency_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -58,7 +57,8 @@ static int marian_generic_frequency_get(struct snd_kcontrol *kcontrol,
 }
 
 
-int	marian_generic_frequency_create(struct marian_card* marian, char* label, uint32_t idx) {
+int marian_generic_frequency_create(struct marian_card *marian, char *label, uint32_t idx)
+{
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name = label,
@@ -72,20 +72,21 @@ int	marian_generic_frequency_create(struct marian_card* marian, char* label, uin
 }
 
 
-void marian_generic_set_dco(struct marian_card* marian, unsigned int freq, unsigned int millis) {
+void marian_generic_set_dco(struct marian_card *marian, unsigned int freq, unsigned int millis)
+{
 	uint64_t val, v2;
 	int64_t detune;
 
-	snd_printdd(KERN_ERR "marian_generic_set_dco(.., %u, %u)\n", freq, millis);
+	MDEBUG("marian_generic_set_dco(.., %u, %u)\n", freq, millis);
 
-	val = (freq*1000+millis)*marian->speedmode;
+	val = (freq * 1000 + millis) * marian->speedmode;
 	val <<= 36;
 
 	if (marian->detune != 0) {
 		// DCO detune active
 		// this calculation takes a bit of a shortcut
 		// - should be implemented using a logarithmic scale
-		detune = marian->detune*100;
+		detune = marian->detune * 100;
 		v2 = val;
 		div_u64(v2, 138564);
 		detune *= v2;
@@ -96,23 +97,22 @@ void marian_generic_set_dco(struct marian_card* marian, unsigned int freq, unsig
 	//val /= 80000000000;
 	val = div_u64(val, 80000000);
 	val = div_u64(val, 1000);
-	
-	snd_printdd(KERN_ERR "  -> 0x%016llx (%llu)\n", val, val);
-	WRITEL(val, marian->iobase + 0x88); 
-	
+
+	MDEBUG("  -> 0x%016llx (%llu)\n", val, val);
+	WRITEL(val, marian->iobase + 0x88);
+
 	marian->dco = freq;
 	marian->dco_millis = millis;
 }
 
 
-static int marian_generic_dco_int_info(struct snd_kcontrol *kcontrol,
-																	struct snd_ctl_elem_info *uinfo)
+static int marian_generic_dco_int_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->count = 1;
-	if (marian->speedmode==1) {
+	if (marian->speedmode == 1) {
 		uinfo->value.integer.min = 32000;
 		uinfo->value.integer.max = 54000;
 	}
@@ -121,8 +121,7 @@ static int marian_generic_dco_int_info(struct snd_kcontrol *kcontrol,
 }
 
 
-static int marian_generic_dco_int_get(struct snd_kcontrol *kcontrol,
-																					struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_dco_int_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -132,8 +131,7 @@ static int marian_generic_dco_int_get(struct snd_kcontrol *kcontrol,
 }
 
 
-static int marian_generic_dco_int_put(struct snd_kcontrol *kcontrol,
-																					struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_dco_int_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -142,7 +140,8 @@ static int marian_generic_dco_int_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int	marian_generic_dco_int_create(struct marian_card* marian, char* label) {
+int marian_generic_dco_int_create(struct marian_card *marian, char *label)
+{
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name = label,
@@ -156,8 +155,7 @@ int	marian_generic_dco_int_create(struct marian_card* marian, char* label) {
 }
 
 
-static int marian_generic_dco_millis_info(struct snd_kcontrol *kcontrol,
-																					struct snd_ctl_elem_info *uinfo)
+static int marian_generic_dco_millis_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -166,12 +164,12 @@ static int marian_generic_dco_millis_info(struct snd_kcontrol *kcontrol,
 	uinfo->value.integer.min = 0;
 	uinfo->value.integer.max = 999;
 	uinfo->value.integer.step = 1;
+
 	return 0;
 }
 
 
-static int marian_generic_dco_millis_get(struct snd_kcontrol *kcontrol,
-																				 struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_dco_millis_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -181,8 +179,7 @@ static int marian_generic_dco_millis_get(struct snd_kcontrol *kcontrol,
 }
 
 
-static int marian_generic_dco_millis_put(struct snd_kcontrol *kcontrol,
-																				 struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_dco_millis_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -192,7 +189,7 @@ static int marian_generic_dco_millis_put(struct snd_kcontrol *kcontrol,
 }
 
 
-int	marian_generic_dco_millis_create(struct marian_card* marian, char* label) {
+int marian_generic_dco_millis_create(struct marian_card *marian, char *label) {
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name = label,
@@ -206,8 +203,7 @@ int	marian_generic_dco_millis_create(struct marian_card* marian, char* label) {
 }
 
 
-static int marian_generic_dco_detune_info(struct snd_kcontrol *kcontrol,
-																							struct snd_ctl_elem_info *uinfo)
+static int marian_generic_dco_detune_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -220,8 +216,7 @@ static int marian_generic_dco_detune_info(struct snd_kcontrol *kcontrol,
 }
 
 
-static int marian_generic_dco_detune_get(struct snd_kcontrol *kcontrol,
-																						 struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_dco_detune_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -231,8 +226,7 @@ static int marian_generic_dco_detune_get(struct snd_kcontrol *kcontrol,
 }
 
 
-static int marian_generic_dco_detune_put(struct snd_kcontrol *kcontrol,
-																						 struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_dco_detune_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -244,7 +238,8 @@ static int marian_generic_dco_detune_put(struct snd_kcontrol *kcontrol,
 }
 
 
-int	marian_generic_dco_detune_create(struct marian_card* marian, char* label) {
+int marian_generic_dco_detune_create(struct marian_card *marian, char *label)
+{
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name = label,
@@ -258,7 +253,8 @@ int	marian_generic_dco_detune_create(struct marian_card* marian, char* label) {
 }
 
 
-int	marian_generic_dco_create(struct marian_card* marian) {
+int marian_generic_dco_create(struct marian_card *marian)
+{
 	marian_generic_dco_int_create(marian, "DCO Freq (Hz)");
 	marian_generic_dco_millis_create(marian, "DCO Freq (millis)");
 	marian_generic_dco_detune_create(marian, "DCO Detune (cent)");
@@ -267,16 +263,9 @@ int	marian_generic_dco_create(struct marian_card* marian) {
 }
 
 
-//
-//
-//
-
-
-int marian_generic_init(struct marian_card* marian)
+int marian_generic_init(struct marian_card *marian)
 {
-#ifdef DEBUG
-	snd_printk(KERN_INFO "marian_generic_init()\n");
-#endif
+	MDEBUG("marian_generic_init()\n");
 
 	if (!marian->desc->set_speedmode)
 		marian->desc->set_speedmode = marian_generic_set_speedmode;
@@ -304,7 +293,7 @@ int marian_generic_init(struct marian_card* marian)
 
 
 /*
-static void marian_prepare_generic(struct marian_card* marian)
+static void marian_prepare_generic(struct marian_card *marian)
 {
 	unsigned int val;
 
@@ -326,8 +315,7 @@ static void marian_prepare_generic(struct marian_card* marian)
 */
 
 
-void marian_proc_status_generic(struct marian_card* marian, 
-																struct snd_info_buffer *buffer)
+void marian_proc_status_generic(struct marian_card *marian, struct snd_info_buffer *buffer)
 {
 	snd_iprintf(buffer, "*** Card registers\n");
 	snd_iprintf(buffer, "RD 0x064: %08x (SPI bits written)\n", readl(marian->iobase + 0x64));
@@ -350,13 +338,11 @@ void marian_proc_status_generic(struct marian_card* marian,
 
 
 /**
- * Default port name function, outputs the static string 
+ * Default port name function, outputs the static string
  * port_names of the card descriptor regardless of current
  * speed mode and wether input or output ports are requested.
  **/
-void marian_proc_ports_generic(struct marian_card* marian, 
-															 struct snd_info_buffer *buffer, 
-															 unsigned int type) 
+void marian_proc_ports_generic(struct marian_card *marian, struct snd_info_buffer *buffer, unsigned int type)
 {
 	snd_iprintf(buffer, marian->desc->port_names);
 }
@@ -368,8 +354,8 @@ void marian_proc_ports_generic(struct marian_card* marian,
 // ALSA controls
 //
 
-void marian_generic_set_speedmode(struct marian_card* marian, unsigned int speedmode) {
-	
+void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speedmode)
+{
 	snd_printdd(KERN_ERR "marian_generic_set_speedmode(.., %u)\n", speedmode);
 
 	if (speedmode>marian->desc->speedmode_max)
@@ -377,38 +363,43 @@ void marian_generic_set_speedmode(struct marian_card* marian, unsigned int speed
 
 	switch (speedmode) {
 	case 1:
-		WRITEL(0x03, marian->iobase + 0x80);        
+		WRITEL(0x03, marian->iobase + 0x80);
 		WRITEL(0x00, marian->iobase + 0x8C);        /* for 48kHz in 1FS mode */
 		//WRITEL(0x02, marian->iobase + 0x8C);        /* for 48kHz in 1FS mode */
 		marian->speedmode = 1;
 		break;
 	case 2:
-		WRITEL(0x03, marian->iobase + 0x80); 
+		WRITEL(0x03, marian->iobase + 0x80)
 		WRITEL(0x01, marian->iobase + 0x8C);        /* for 96kHz in 2FS mode */
 		marian->speedmode = 2;
-		break;		
+		break;
 	case 4:
-		WRITEL(0x03, marian->iobase + 0x80); 
+		WRITEL(0x03, marian->iobase + 0x80);
 		WRITEL(0x00, marian->iobase + 0x8C);        /* for 192kHz in 4FS mode */
 		marian->speedmode = 4;
-		break;		
+		break;
 	}
 
 	marian_generic_set_dco(marian, marian->dco, marian->dco_millis);
 }
 
 
-static int marian_generic_speedmode_info(struct snd_kcontrol *kcontrol,
-																			 struct snd_ctl_elem_info *uinfo)
+static int marian_generic_speedmode_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 	static char *texts[] = { "1FS", "2FS", "4FS" };
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
 	switch (marian->desc->speedmode_max) {
-	case 1:	uinfo->value.enumerated.items = 1; break;
-	case 2: uinfo->value.enumerated.items = 2; break;
-	case 4: uinfo->value.enumerated.items = 3; break;
+	case 1:
+		uinfo->value.enumerated.items = 1;
+		break;
+	case 2:
+		uinfo->value.enumerated.items = 2;
+		break;
+	case 4:
+		uinfo->value.enumerated.items = 3;
+		break;
 	}
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
 		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
@@ -417,26 +408,25 @@ static int marian_generic_speedmode_info(struct snd_kcontrol *kcontrol,
 }
 
 
-static int marian_generic_speedmode_get(struct snd_kcontrol *kcontrol,
-																		struct snd_ctl_elem_value *ucontrol)
+static int marian_generic_speedmode_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
-	if (marian->speedmode==4)
+	if (marian->speedmode == 4)
 		ucontrol->value.enumerated.item[0] = 2;
 	else
-		ucontrol->value.enumerated.item[0] = marian->speedmode-1;
+		ucontrol->value.enumerated.item[0] = marian->speedmode - 1;
 
 	return 0;
 }
 
 
-static int marian_generic_speedmode_put(struct snd_kcontrol *kcontrol,
-																		struct snd_ctl_elem_value *ucontrol) {
+static int marian_generic_speedmode_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
-	if (ucontrol->value.enumerated.item[0]<2)
-		marian->desc->set_speedmode(marian, ucontrol->value.enumerated.item[0]+1);
+	if (ucontrol->value.enumerated.item[0] < 2)
+		marian->desc->set_speedmode(marian, ucontrol->value.enumerated.item[0] + 1);
 	else
 		marian->desc->set_speedmode(marian, 4);
 
@@ -444,7 +434,8 @@ static int marian_generic_speedmode_put(struct snd_kcontrol *kcontrol,
 }
 
 
-int marian_generic_speedmode_create(struct marian_card* marian) {
+int marian_generic_speedmode_create(struct marian_card *marian)
+{
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name = "Speed Mode",
@@ -458,7 +449,8 @@ int marian_generic_speedmode_create(struct marian_card* marian) {
 }
 
 
-void marian_generic_set_clock_source(struct marian_card* marian, uint8_t source) {
+void marian_generic_set_clock_source(struct marian_card *marian, uint8_t source)
+{
 	WRITEL(source, marian->iobase + 0x90);
 	marian->clock_source = source;
 }

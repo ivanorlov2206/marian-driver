@@ -15,6 +15,11 @@
 #include <sound/initval.h>
 #include <sound/info.h>
 
+#ifdef DEBUG
+#define MDEBUG(format, args...) snd_printdd(KERN_INFO format, ## args);
+#else
+#define MDEBUG(format, args...)
+#endif
 
 struct marian_card;
 struct marian_card_descriptor;

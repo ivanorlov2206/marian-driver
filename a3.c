@@ -66,19 +66,19 @@ static int marian_a3_clock_source_put(struct snd_kcontrol *kcontrol,
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	switch (ucontrol->value.enumerated.item[0]) {
-	case 0: // DCO
+	case CLOCK_SRC_DCO: // DCO
 		marian_generic_set_clock_source(marian, 1);
 		break;
-	case 1: // Sync bus
+	case CLOCK_SRC_SYNCBUS: // Sync bus
 		marian_generic_set_clock_source(marian, 2);
 		break;
-	case 2: // ADAT input 1
+	case CLOCK_SRC_ADAT1: // ADAT input 1
 		marian_generic_set_clock_source(marian, 4);
 		break;
-	case 3: // ADAT input 2
+	case CLOCK_SRC_ADAT2: // ADAT input 2
 		marian_generic_set_clock_source(marian, 5);
 		break;
-	case 4: // ADAT input 3
+	case CLOCK_SRC_ADAT3: // ADAT input 3
 		marian_generic_set_clock_source(marian, 6);
 		break;
 	}
@@ -178,7 +178,7 @@ void marian_a3_proc_ports(struct marian_card *marian, struct snd_info_buffer *bu
 {
 	int i;
 
-	for (i = 0; i <= 23; i++)
+	for (i = 0; i <= PORTS_COUNT; i++)
 		snd_iprintf(buffer, "%d=ADAT p%dch%02d\n", i + 1, i / 8 + 1, i % 8 + 1);
 }
 
@@ -221,7 +221,7 @@ void marian_a3_proc_status(struct marian_card *marian, struct snd_info_buffer *b
 
 	for (i = 0; i < 512; i++) {
 		if (i % 64 == 0)
-			snd_iprintf(buffer, "\n% 4dK:\t", i);
+			snd_iprintf(buffer, "\n%4dK:\t", i);
 		else if (i % 8 == 0)
 			snd_iprintf(buffer, " ");
 

@@ -237,15 +237,6 @@ MODULE_AUTHOR("Florin Faber <faberman@linuxproaudio.org>");
 MODULE_DESCRIPTION("MARIAN Seraph series");
 MODULE_LICENSE("GPL");
 
-#define PCI_VENDOR_ID_MARIAN            0x1382
-#define PCI_DEVICE_ID_MARIAN_SERAPH_A3  0x4630
-#define PCI_DEVICE_ID_MARIAN_C_BOX      0x4640
-#define PCI_DEVICE_ID_MARIAN_SERAPH_AD2 0x4720
-#define PCI_DEVICE_ID_MARIAN_SERAPH_D4  0x4840
-#define PCI_DEVICE_ID_MARIAN_SERAPH_D8  0x4880
-#define PCI_DEVICE_ID_MARIAN_SERAPH_8   0x4980
-#define PCI_DEVICE_ID_MARIAN_SERAPH_M2  0x5020
-
 
 static const struct pci_device_id snd_marian_ids[] = {
 	{PCI_DEVICE(PCI_VENDOR_ID_MARIAN, PCI_DEVICE_ID_MARIAN_SERAPH_A3),
@@ -351,29 +342,29 @@ module_exit(alsa_card_marian_exit);
 static void print_irq_status(unsigned int v)
 {
 	MDEBUG("IRQ status 0x%08x\n", v);
-	if (v & 1)
+	if (v & ERR_DEAD_WRITE)
 		MDEBUG("  -> ERROR, dead write (PCI wr fault)\n");
-	if (v & (1 << 1))
+	if (v & ERR_DEAD_READ)
 		MDEBUG("  -> ERROR, dead read (PCI rd fault)\n");
-	if (v & (1 << 2))
+	if (v & ERR_DATA_LOST)
 		MDEBUG("  -> ERROR, data lost (PCI transfer not complete)\n");
-	if (v & (1 << 3))
+	if (v & ERR_PAGE_CONF)
 		MDEBUG("  -> ERROR, page conflict (transfer not complete)\n");
-	if (v & (1 << 4))
+	if (v & STATUS_ST_READY)
 		MDEBUG("  -> start ready\n");
-	if (v & (1 << 8))
+	if (v & STATUS_INT_PLAY)
 		MDEBUG("  -> interrupt play\n");
-	if (v & (1 << 9))
+	if (v & STATUS_INT_PPLAY)
 		MDEBUG("  -> interrupt play page\n");
-	if (v & (1 << 10))
+	if (v & ERR_INT_PLAY)
 		MDEBUG("  -> ERROR, interrupt play not executed\n");
-	if (v & (1 << 11))
+	if (v & STATUS_INT_REC)
 		MDEBUG("  -> interrupt record\n");
-	if (v & (1 << 12))
+	if (v & STATUS_INT_PREC)
 		MDEBUG("  -> interrupt record page\n");
-	if (v & (1 << 13))
+	if (v & ERR_INT_REC)
 		MDEBUG("  -> ERROR, interrupt record not executed\n");
-	if (v & (1 << 14))
+	if (v & STATUS_INT_PREP)
 		MDEBUG("  -> interrupt prepare\n");
 }
 
@@ -641,12 +632,12 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 	size = params_buffer_size(params)*params_channels(params)*4;
 	MDEBUG("snd_marian_hw_params(): period buf size: %d\n", size);
 
-	if (params_rate(params) < 54000)
-		speedmode = 1;
-	else if (params_rate(params) < 108000)
-		speedmode = 2;
+	if (params_rate(params) < RATE_SLOW)
+		speedmode = SPEEDMODE_SLOW;
+	else if (params_rate(params) < RATE_NORMAL)
+		speedmode = SPEEDMODE_NORMAL;
 	else
-		speedmode = 4;
+		speedmode = SPEEDMODE_FAST;
 
 	if (speedmode > marian->desc->speedmode_max) {
 		snd_printk(KERN_INFO "snd_marian_hw_params(): Requested rate (%u Hz) higher than card's maximum\n",

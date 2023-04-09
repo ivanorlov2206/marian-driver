@@ -116,7 +116,7 @@ static int marian_generic_dco_int_info(struct snd_kcontrol *kcontrol,
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->count = 1;
-	if (marian->speedmode == 1) {
+	if (marian->speedmode == SPEEDMODE_SLOW) {
 		uinfo->value.integer.min = 32000;
 		uinfo->value.integer.max = 54000;
 	}
@@ -292,7 +292,7 @@ int marian_generic_init(struct marian_card *marian)
 	marian_generic_set_dco(marian, 48000, 0);
 
 	// init clock mode
-	marian_generic_set_speedmode(marian, 1);
+	marian_generic_set_speedmode(marian, SPEEDMODE_SLOW);
 
 	// init internal clock and set it as clock source
 	marian_generic_set_clock_source(marian, 1);
@@ -382,21 +382,21 @@ void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speed
 		return;
 
 	switch (speedmode) {
-	case 1:
+	case SPEEDMODE_SLOW:
 		WRITEL(0x03, marian->iobase + 0x80);
 		WRITEL(0x00, marian->iobase + 0x8C);        /* for 48kHz in 1FS mode */
 		//WRITEL(0x02, marian->iobase + 0x8C);        /* for 48kHz in 1FS mode */
-		marian->speedmode = 1;
+		marian->speedmode = SPEEDMODE_SLOW;
 		break;
-	case 2:
+	case SPEEDMODE_NORMAL:
 		WRITEL(0x03, marian->iobase + 0x80)
 		WRITEL(0x01, marian->iobase + 0x8C);        /* for 96kHz in 2FS mode */
-		marian->speedmode = 2;
+		marian->speedmode = SPEEDMODE_NORMAL;
 		break;
-	case 4:
+	case SPEEDMODE_FAST:
 		WRITEL(0x03, marian->iobase + 0x80);
 		WRITEL(0x00, marian->iobase + 0x8C);        /* for 192kHz in 4FS mode */
-		marian->speedmode = 4;
+		marian->speedmode = SPEEDMODE_FAST;
 		break;
 	}
 
@@ -413,13 +413,13 @@ static int marian_generic_speedmode_info(struct snd_kcontrol *kcontrol,
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
 	switch (marian->desc->speedmode_max) {
-	case 1:
+	case SPEEDMODE_SLOW:
 		uinfo->value.enumerated.items = 1;
 		break;
-	case 2:
+	case SPEEDMODE_NORMAL:
 		uinfo->value.enumerated.items = 2;
 		break;
-	case 4:
+	case SPEEDMODE_FAST:
 		uinfo->value.enumerated.items = 3;
 		break;
 	}
@@ -435,7 +435,7 @@ static int marian_generic_speedmode_get(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
-	if (marian->speedmode == 4)
+	if (marian->speedmode == SPEEDMODE_FAST)
 		ucontrol->value.enumerated.item[0] = 2;
 	else
 		ucontrol->value.enumerated.item[0] = marian->speedmode - 1;
@@ -452,7 +452,7 @@ static int marian_generic_speedmode_put(struct snd_kcontrol *kcontrol,
 	if (ucontrol->value.enumerated.item[0] < 2)
 		marian->desc->set_speedmode(marian, ucontrol->value.enumerated.item[0] + 1);
 	else
-		marian->desc->set_speedmode(marian, 4);
+		marian->desc->set_speedmode(marian, SPEEDMODE_FAST);
 
 	return 0;
 }

@@ -376,7 +376,7 @@ void marian_proc_ports_generic(struct marian_card *marian, struct snd_info_buffe
 
 void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speedmode)
 {
-	snd_printdd(KERN_ERR "marian_generic_set_speedmode(.., %u)\n", speedmode);
+	MDEBUG("marian_generic_set_speedmode(.., %u)\n", speedmode);
 
 	if (speedmode > marian->desc->speedmode_max)
 		return;
@@ -518,7 +518,7 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 			tries = 10;
 			SPI_WAIT_FOR_AR(tries);
 			if (tries == 0) {
-				snd_printk(KERN_INFO "marian_spi_transfer: bus didn't signal AR\n");
+				MDEBUG("marian_spi_transfer: bus didn't signal AR\n");
 				return -1;
 			}
 

@@ -21,6 +21,8 @@
 #define MDEBUG(format, args...)
 #endif
 
+#define MERROR(format, args...) snd_printk(KERN_ERR format, ## args)
+
 struct marian_card;
 struct marian_card_descriptor;
 

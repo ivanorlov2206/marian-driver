@@ -429,7 +429,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	int err;
 	unsigned int len;
 
-	snd_printdd(KERN_ERR "snd_marian_card_create()\n");
+	MDEBUG("snd_marian_card_create()\n");
 
 	/** initialize marian struct */
 	marian->desc = desc;
@@ -459,14 +459,14 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 		marian->port, marian->port+len-1, len);
 	marian->iobase = pci_iomap(pci, 0, 0);
 	if (!marian->iobase) {
-		snd_printk(KERN_ERR "unable to grab region 0x%lx-0x%lx\n",
+		MERROR("unable to grab region 0x%lx-0x%lx\n",
 			marian->port, marian->port+len-1);
 		return -EBUSY;
 	}
 
 	MDEBUG("grabbing IRQ %d\n", pci->irq);
 	if (request_irq(pci->irq, snd_marian_interrupt, IRQF_SHARED, "marian", marian)) {
-		snd_printk(KERN_ERR "unable to grab IRQ %d\n", pci->irq);
+		MERROR("unable to grab IRQ %d\n", pci->irq);
 		return -EBUSY;
 	}
 	marian->irq = pci->irq;
@@ -495,13 +495,13 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	err = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, &pci->dev,
 				desc->dma_bufsize, &marian->dmabuf);
 	if (err < 0) {
-		snd_printk(KERN_ERR "Could not allocate %d Bytes (%d)\n", len, err);
+		MERROR("Could not allocate %d Bytes (%d)\n", len, err);
 		while (snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, &pci->dev, len, &marian->dmabuf) < 0)
 			len--; // TODO Fix logical bug (what if we can't allocate any block?)
 
 		snd_dma_free_pages(&marian->dmabuf);
-		snd_printk(KERN_ERR "The maximum block of consecutive bytes is %d bytes long.\n", len);
-		snd_printk(KERN_ERR "Please reboot to clean your page table.\n");
+		MERROR("The maximum block of consecutive bytes is %d bytes long.\n", len);
+		MERROR("Please reboot to clean your page table.\n");
 		return err;
 	}
 
@@ -639,7 +639,7 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 		speedmode = SPEEDMODE_FAST;
 
 	if (speedmode > marian->desc->speedmode_max) {
-		snd_printk(KERN_INFO "snd_marian_hw_params(): Requested rate (%u Hz) higher than card's maximum\n",
+		MERROR("snd_marian_hw_params(): Requested rate (%u Hz) higher than card's maximum\n",
 				params_rate(params));
 		_snd_pcm_hw_param_setempty(params, SNDRV_PCM_HW_PARAM_RATE);
 		return -EBUSY;
@@ -795,7 +795,7 @@ static int snd_marian_mmap(struct snd_pcm_substream *substream, struct vm_area_s
 
 	if (remap_pfn_range(vma, vma->vm_start, substream->runtime->dma_addr >> PAGE_SHIFT,
 				vma->vm_end - vma->vm_start, vma->vm_page_prot) < 0) {
-		snd_printk(KERN_ERR "remap_pfn_range failed\n");
+		MERROR("remap_pfn_range failed\n");
 		return -EIO;
 	}
 

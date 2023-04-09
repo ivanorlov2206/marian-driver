@@ -50,7 +50,7 @@ static int marian_a3_clock_source_get(struct snd_kcontrol *kcontrol,
 		ucontrol->value.enumerated.item[0] = 4;
 		break;
 	default:
-		snd_printk(KERN_INFO "marian_a3_clock_source_get: Illegal value for clock_source! (%d)\n",
+		MDEBUG("marian_a3_clock_source_get: Illegal value for clock_source! (%d)\n",
 				marian->clock_source);
 		return -1;
 	}

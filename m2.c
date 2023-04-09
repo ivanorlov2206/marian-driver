@@ -385,7 +385,7 @@ static int marian_m2_clock_source_get(struct snd_kcontrol *kcontrol,
 		ucontrol->value.enumerated.item[0] = 3;
 		break;
 	default:
-		snd_printk(KERN_INFO "marian_m2_clock_source_get: Illegal value for clock_source! (%d)\n",
+		MDEBUG("marian_m2_clock_source_get: Illegal value for clock_source! (%d)\n",
 				marian->clock_source);
 		return -1;
 	}
@@ -621,7 +621,7 @@ int marian_m2_init(struct marian_card *marian)
 
 	spec = kzalloc(sizeof(struct m2_specific), GFP_KERNEL);
 	if (!spec) {
-		snd_printk(KERN_ERR "marian_m2: Cannot allocate card specific structure\n");
+		MDEBUG("marian_m2: Cannot allocate card specific structure\n");
 		return -ENOMEM;
 	}
 

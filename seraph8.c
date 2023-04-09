@@ -38,7 +38,7 @@ static int marian_seraph8_clock_source_get(struct snd_kcontrol *kcontrol,
 		ucontrol->value.enumerated.item[0] = 1;
 		break;
 	default:
-		snd_printk(KERN_INFO "marian_seraph8_clock_source_get: Illegal value for clock_source! (%d)\n",
+		MDEBUG("marian_seraph8_clock_source_get: Illegal value for clock_source! (%d)\n",
 			marian->clock_source);
 		return -1;
 	}
@@ -95,7 +95,7 @@ void marian_seraph8_prepare(struct marian_card *marian)
 	// Transfer enable Bits for all Analog Channels
 	uint32_t mask = 0x000000FF;
 
-	snd_printdd(KERN_INFO "marian_seraph8_prepare()\n");
+	MDEBUG("marian_seraph8_prepare()\n");
 
 	// arm channels
 
@@ -108,7 +108,7 @@ void marian_seraph8_init_codec(struct marian_card *marian)
 {
 	uint8_t buf_out[2];
 
-	snd_printdd(KERN_ERR "marian_init_codec_seraph8()\n");
+	MDEBUG("marian_init_codec_seraph8()\n");
 
 	// hold codecs reset line
 	WRITEL(0x00, marian->iobase + 0x14);

@@ -19,7 +19,6 @@
  *
  */
 
-#define DEBUG 1
 
 #include <linux/version.h>
 

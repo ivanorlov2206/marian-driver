@@ -1,4 +1,4 @@
-marianpci-y := marian.o a3.o generic.o m2.o seraph8.o spi.o
+marianpci-y := marian.o a3.o generic.o m2.o seraph8.o
 obj-m := marianpci.o
 
 all:

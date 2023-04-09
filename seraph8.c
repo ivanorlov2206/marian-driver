@@ -1,19 +1,14 @@
 #include "common.h"
 #include "seraph8.h"
-#include "spi.h"
 #include "generic.h"
-
-
 
 //
 // ALSA controls
 //
 
-
 //
 // RW
 //
-
 
 static int marian_seraph8_clock_source_info(struct snd_kcontrol *kcontrol,
 						struct snd_ctl_elem_info *uinfo)

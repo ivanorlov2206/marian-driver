@@ -1,6 +1,5 @@
 #include "common.h"
 #include "a3.h"
-#include "spi.h"
 #include "generic.h"
 
 

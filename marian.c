@@ -25,7 +25,6 @@
 
 #include "common.h"
 #include "generic.h"
-#include "spi.h"
 #include "a3.h"
 #include "m2.h"
 #include "seraph8.h"

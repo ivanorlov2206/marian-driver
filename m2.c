@@ -1,8 +1,6 @@
-
 #include "common.h"
 #include "generic.h"
 #include "m2.h"
-#include "spi.h"
 
 //#define DEBUG 1
 

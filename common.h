@@ -154,17 +154,17 @@ struct marian_card {
 #define MARIAN_PORTS_TYPE_OUTPUT 1
 
 #define ERR_DEAD_WRITE 1
-#define ERR_DEAD_READ 1 << 1
-#define ERR_DATA_LOST 1 << 2
-#define ERR_PAGE_CONF 1 << 3
-#define ERR_INT_PLAY 1 << 10
-#define ERR_INT_REC 1 << 13
+#define ERR_DEAD_READ (1 << 1)
+#define ERR_DATA_LOST (1 << 2)
+#define ERR_PAGE_CONF (1 << 3)
+#define ERR_INT_PLAY (1 << 10)
+#define ERR_INT_REC (1 << 13)
 
-#define STATUS_ST_READY 1 << 4
-#define STATUS_INT_PLAY 1 << 8
-#define STATUS_INT_PPLAY 1 << 9
-#define STATUS_INT_REC 1 << 11
-#define STATUS_INT_PREC 1 << 12
-#define STATUS_INT_PREP 1 << 14
+#define STATUS_ST_READY (1 << 4)
+#define STATUS_INT_PLAY (1 << 8)
+#define STATUS_INT_PPLAY (1 << 9)
+#define STATUS_INT_REC (1 << 11)
+#define STATUS_INT_PREC (1 << 12)
+#define STATUS_INT_PREP (1 << 14)
 
 #endif

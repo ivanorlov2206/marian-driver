@@ -270,9 +270,10 @@ static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci
 	if (dev >= SNDRV_CARDS)
 		return -ENODEV;
 
-	MDEBUG("snd_marian_probe(.., [%04x:%04x, %lu])\n",
+	dev_dbg(&pci->dev, "snd_marian_probe(.., [%04x:%04x, %lu])\n",
 		pci_id->vendor, pci_id->device, pci_id->driver_data);
-	MDEBUG("Found a %s, creating instance..\n", descriptors[pci_id->driver_data].name);
+	dev_dbg(&pci->dev, "Found a %s, creating instance..\n",
+		descriptors[pci_id->driver_data].name);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 16, 0)
 	err = snd_card_create(index[dev], id[dev],
@@ -301,8 +302,6 @@ static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci
 
 static void snd_marian_remove(struct pci_dev *pci)
 {
-	MDEBUG("snd_marian_remove()\n");
-
 	snd_card_free(pci_get_drvdata(pci));
 	pci_set_drvdata(pci, NULL);
 }
@@ -339,31 +338,31 @@ module_exit(alsa_card_marian_exit);
 
 static void print_irq_status(unsigned int v)
 {
-	MDEBUG("IRQ status 0x%08x\n", v);
+	snd_printdd(KERN_INFO "IRQ status 0x%08x\n", v);
 	if (v & ERR_DEAD_WRITE)
-		MDEBUG("  -> ERROR, dead write (PCI wr fault)\n");
+		snd_printdd(KERN_INFO "  -> ERROR, dead write (PCI wr fault)\n");
 	if (v & ERR_DEAD_READ)
-		MDEBUG("  -> ERROR, dead read (PCI rd fault)\n");
+		snd_printdd(KERN_INFO "  -> ERROR, dead read (PCI rd fault)\n");
 	if (v & ERR_DATA_LOST)
-		MDEBUG("  -> ERROR, data lost (PCI transfer not complete)\n");
+		snd_printdd(KERN_INFO "  -> ERROR, data lost (PCI transfer not complete)\n");
 	if (v & ERR_PAGE_CONF)
-		MDEBUG("  -> ERROR, page conflict (transfer not complete)\n");
+		snd_printdd(KERN_INFO "  -> ERROR, page conflict (transfer not complete)\n");
 	if (v & STATUS_ST_READY)
-		MDEBUG("  -> start ready\n");
+		snd_printdd(KERN_INFO "  -> start ready\n");
 	if (v & STATUS_INT_PLAY)
-		MDEBUG("  -> interrupt play\n");
+		snd_printdd(KERN_INFO "  -> interrupt play\n");
 	if (v & STATUS_INT_PPLAY)
-		MDEBUG("  -> interrupt play page\n");
+		snd_printdd(KERN_INFO "  -> interrupt play page\n");
 	if (v & ERR_INT_PLAY)
-		MDEBUG("  -> ERROR, interrupt play not executed\n");
+		snd_printdd(KERN_INFO "  -> ERROR, interrupt play not executed\n");
 	if (v & STATUS_INT_REC)
-		MDEBUG("  -> interrupt record\n");
+		snd_printdd(KERN_INFO "  -> interrupt record\n");
 	if (v & STATUS_INT_PREC)
-		MDEBUG("  -> interrupt record page\n");
+		snd_printdd(KERN_INFO "  -> interrupt record page\n");
 	if (v & ERR_INT_REC)
-		MDEBUG("  -> ERROR, interrupt record not executed\n");
+		snd_printdd(KERN_INFO "  -> ERROR, interrupt record not executed\n");
 	if (v & STATUS_INT_PREP)
-		MDEBUG("  -> interrupt prepare\n");
+		snd_printdd(KERN_INFO "  -> interrupt prepare\n");
 }
 
 
@@ -428,8 +427,6 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	int err;
 	unsigned int len;
 
-	MDEBUG("snd_marian_card_create()\n");
-
 	/** initialize marian struct */
 	marian->desc = desc;
 	marian->card = card;
@@ -454,18 +451,18 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 
 	marian->port = pci_resource_start(pci, 0);
 	len = pci_resource_len(pci, 0);
-	MDEBUG("grabbing memory region 0x%lx-0x%lx (%d bytes)..\n",
+	dev_dbg(&pci->dev, "grabbing memory region 0x%lx-0x%lx (%d bytes)..\n",
 		marian->port, marian->port+len-1, len);
 	marian->iobase = pci_iomap(pci, 0, 0);
 	if (!marian->iobase) {
-		MERROR("unable to grab region 0x%lx-0x%lx\n",
+		dev_err(&pci->dev, "unable to grab region 0x%lx-0x%lx\n",
 			marian->port, marian->port+len-1);
 		return -EBUSY;
 	}
 
-	MDEBUG("grabbing IRQ %d\n", pci->irq);
+	dev_dbg(&pci->dev, "grabbing IRQ %d\n", pci->irq);
 	if (request_irq(pci->irq, snd_marian_interrupt, IRQF_SHARED, "marian", marian)) {
-		MERROR("unable to grab IRQ %d\n", pci->irq);
+		dev_err(&pci->dev, "unable to grab IRQ %d\n", pci->irq);
 		return -EBUSY;
 	}
 	marian->irq = pci->irq;
@@ -490,23 +487,25 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 
 	/** set up DMA buffers */
 	len = PAGE_ALIGN(desc->dma_bufsize);
-	MDEBUG("Allocating %d bytes DMA buffer\n", len);
+	dev_dbg(card->dev, "Allocating %d bytes DMA buffer\n", len);
 	err = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, &pci->dev,
 				desc->dma_bufsize, &marian->dmabuf);
 	if (err < 0) {
-		MERROR("Could not allocate %d Bytes (%d)\n", len, err);
+		dev_err(card->dev, "Could not allocate %d Bytes (%d)\n", len, err);
 		while (snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, &pci->dev, len, &marian->dmabuf) < 0)
 			len--; // TODO Fix logical bug (what if we can't allocate any block?)
 
 		snd_dma_free_pages(&marian->dmabuf);
-		MERROR("The maximum block of consecutive bytes is %d bytes long.\n", len);
-		MERROR("Please reboot to clean your page table.\n");
+		dev_err(card->dev,
+			"The maximum block of consecutive bytes is %d bytes long.\n", len);
+		dev_err(card->dev, "Please reboot to clean your page table.\n");
 		return err;
 	}
 
-	MDEBUG("dmabuf.area = 0x%lx\n", (unsigned long) marian->dmabuf.area); // TODO fix address conversions
-	MDEBUG("dmabuf.addr = 0x%lx\n", (unsigned long) marian->dmabuf.addr);
-	MDEBUG("dmabuf.bytes = %d\n", (int) marian->dmabuf.bytes);
+	dev_dbg(card->dev, "dmabuf.area = 0x%lx\n",
+		(unsigned long) marian->dmabuf.area); // TODO fix address conversions
+	dev_dbg(card->dev, "dmabuf.addr = 0x%lx\n", (unsigned long) marian->dmabuf.addr);
+	dev_dbg(card->dev, "dmabuf.bytes = %d\n", (int) marian->dmabuf.bytes);
 
 	/* set up /proc entries */
 	if (!snd_card_proc_new(card, "status", &entry))
@@ -535,8 +534,6 @@ static void snd_marian_card_free(struct snd_card *card)
 {
 	struct marian_card *marian = card->private_data;
 
-	MDEBUG("snd_marian_card_free()\n");
-
 	if (!marian)
 		return;
 
@@ -559,8 +556,6 @@ static int snd_marian_playback_open(struct snd_pcm_substream *substream)
 {
 	struct marian_card *marian = substream->private_data;
 
-	MDEBUG("snd_marian_playback_open()\n");
-
 	substream->runtime->hw = marian->desc->info_playback;
 
 	marian->playback_substream = substream;
@@ -575,8 +570,6 @@ static int snd_marian_playback_release(struct snd_pcm_substream *substream)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
 
-	MDEBUG("snd_marian_playback_release()\n");
-
 	marian->playback_substream = NULL;
 
 	return 0;
@@ -586,8 +579,6 @@ static int snd_marian_playback_release(struct snd_pcm_substream *substream)
 static int snd_marian_capture_open(struct snd_pcm_substream *substream)
 {
 	struct marian_card *marian = substream->private_data;
-
-	MDEBUG("snd_marian_capture_open()\n");
 
 	substream->runtime->hw = marian->desc->info_capture;
 
@@ -603,8 +594,6 @@ static int snd_marian_capture_release(struct snd_pcm_substream *substream)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
 
-	MDEBUG("snd_marian_capture_release()\n");
-
 	marian->capture_substream = NULL;
 
 	return 0;
@@ -618,17 +607,20 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 	unsigned int speedmode;
 	int size;
 
-	MDEBUG("snd_marian_hw_params(): %d ch %s @ %dHz, buffer size %d\n",
+	dev_dbg(marian->card->dev,
+		"snd_marian_hw_params(): %d ch %s @ %dHz, buffer size %d\n",
 		params_channels(params),
 		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture",
 		params_rate(params),
 		params_buffer_size(params));
 
 	marian->period_size = params_buffer_size(params);
-	MDEBUG("snd_marian_hw_params(): period size: %d\n", marian->period_size);
+	dev_dbg(marian->card->dev,
+		"snd_marian_hw_params(): period size: %d\n", marian->period_size);
 
 	size = params_buffer_size(params)*params_channels(params)*4;
-	MDEBUG("snd_marian_hw_params(): period buf size: %d\n", size);
+	dev_dbg(marian->card->dev,
+		"snd_marian_hw_params(): period buf size: %d\n", size);
 
 	if (params_rate(params) < RATE_SLOW)
 		speedmode = SPEEDMODE_SLOW;
@@ -638,8 +630,9 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 		speedmode = SPEEDMODE_FAST;
 
 	if (speedmode > marian->desc->speedmode_max) {
-		MERROR("snd_marian_hw_params(): Requested rate (%u Hz) higher than card's maximum\n",
-				params_rate(params));
+		dev_err(marian->card->dev,
+			"snd_marian_hw_params(): Requested rate (%u Hz) higher than card's maximum\n",
+			params_rate(params));
 		_snd_pcm_hw_param_setempty(params, SNDRV_PCM_HW_PARAM_RATE);
 		return -EBUSY;
 	}
@@ -654,26 +647,29 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 
 	snd_pcm_set_runtime_buffer(substream, &marian->dmabuf);
 
-	MDEBUG("  stream    : %s\n",
+	dev_dbg(marian->card->dev, "  stream    : %s\n",
 		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture");
-	MDEBUG("  dma_area  : 0x%lx\n", (unsigned long) substream->runtime->dma_area);
-	MDEBUG("  dma_addr  : 0x%lx\n", (unsigned long) substream->runtime->dma_addr);
-	MDEBUG("  dma_bytes : 0x%lx (%d)\n",
-				(unsigned long) substream->runtime->dma_bytes,
-				(int) substream->runtime->dma_bytes);
+	dev_dbg(marian->card->dev,
+		"  dma_area  : 0x%lx\n", (unsigned long) substream->runtime->dma_area);
+	dev_dbg(marian->card->dev,
+		"  dma_addr  : 0x%lx\n", (unsigned long) substream->runtime->dma_addr);
+	dev_dbg(marian->card->dev, "  dma_bytes : 0x%lx (%d)\n",
+		(unsigned long) substream->runtime->dma_bytes,
+		(int) substream->runtime->dma_bytes);
 
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-		MDEBUG("  setting card's DMA ADR to %08x\n",
+		dev_dbg(marian->card->dev, "  setting card's DMA ADR to %08x\n",
 			(unsigned int) marian->capture_substream->runtime->dma_addr);
 		WRITEL(marian->capture_substream->runtime->dma_addr,
 			marian->iobase + SERAPH_WR_DMA_ADR); // TODO Fix address conversions
 	} else if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		MDEBUG("  setting card's DMA ADR to %08x\n",
+		dev_dbg(marian->card->dev, "  setting card's DMA ADR to %08x\n",
 			(unsigned int) marian->playback_substream->runtime->dma_addr);
 		WRITEL(marian->playback_substream->runtime->dma_addr,
 			marian->iobase + SERAPH_WR_DMA_ADR);
 	}
-	MDEBUG("  setting card's DMA block count to %d\n", marian->period_size/16);
+	dev_dbg(marian->card->dev,
+		"  setting card's DMA block count to %d\n", marian->period_size/16);
 	WRITEL(marian->period_size/16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
 
 	/* apply optional card specific hw constraints */
@@ -686,8 +682,6 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 
 static int snd_marian_hw_free(struct snd_pcm_substream *substream)
 {
-	MDEBUG("snd_marian_hw_free()\n");
-
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		// mute inputs
 
@@ -704,16 +698,18 @@ static int snd_marian_prepare(struct snd_pcm_substream *substream)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
 
-	MDEBUG("snd_marian_prepare()\n");
-
-	MDEBUG("  stream    : %s\n",
+	dev_dbg(marian->card->dev, "  stream    : %s\n",
 		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture");
 	// TODO Wrong conversions
-	MDEBUG("  dma_area  : 0x%lx\n", (unsigned long) substream->runtime->dma_area);
-	MDEBUG("  dma_addr  : 0x%lx\n", (unsigned long) substream->runtime->dma_addr);
-	MDEBUG("  dma_bytes : 0x%lx (%d)\n", (unsigned long) substream->runtime->dma_bytes,
+	dev_dbg(marian->card->dev, "  dma_area  : 0x%lx\n",
+		(unsigned long) substream->runtime->dma_area);
+	dev_dbg(marian->card->dev, "  dma_addr  : 0x%lx\n",
+		(unsigned long) substream->runtime->dma_addr);
+	dev_dbg(marian->card->dev, "  dma_bytes : 0x%lx (%d)\n",
+		(unsigned long) substream->runtime->dma_bytes,
 					(int) substream->runtime->dma_bytes);
-	MDEBUG("  dma_buffer: 0x%lx\n", (unsigned long) substream->runtime->dma_buffer_p);
+	dev_dbg(marian->card->dev, "  dma_buffer: 0x%lx\n",
+		(unsigned long) substream->runtime->dma_buffer_p);
 
 	if (marian->desc->prepare)
 		marian->desc->prepare(marian);
@@ -728,7 +724,6 @@ static int snd_marian_prepare(struct snd_pcm_substream *substream)
 
 static void marian_silence(struct marian_card *marian)
 {
-	MDEBUG("marian_silence()\n");
 	memset(marian->dmabuf.area, 0, marian->dmabuf.bytes);
 }
 
@@ -737,20 +732,18 @@ static int snd_marian_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
 
-	MDEBUG("snd_marian_trigger(.., %d)\n", cmd);
-
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		marian_silence(marian);
-		MDEBUG("  enabling DMA transfers\n");
+		dev_dbg(marian->card->dev, "  enabling DMA transfers\n");
 		WRITEL(0x3, marian->iobase + SERAPH_WR_DMA_ENABLE);
-		MDEBUG("  enabling IRQ\n");
+		dev_dbg(marian->card->dev, "  enabling IRQ\n");
 		WRITEL(0x2, marian->iobase + SERAPH_WR_IE_ENABLE);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
-		MDEBUG("  disabling IRQ\n");
+		dev_dbg(marian->card->dev, "  disabling IRQ\n");
 		WRITEL(0x0, marian->iobase + SERAPH_WR_IE_ENABLE);
-		MDEBUG("  disabling DMA transfers\n");
+		dev_dbg(marian->card->dev, "  disabling DMA transfers\n");
 		WRITEL(0x0, marian->iobase + SERAPH_WR_DMA_ENABLE);
 		marian_silence(marian);
 
@@ -784,17 +777,20 @@ static snd_pcm_uframes_t snd_marian_hw_pointer(struct snd_pcm_substream *substre
 
 static int snd_marian_mmap(struct snd_pcm_substream *substream, struct vm_area_struct *vma)
 {
-	//struct marian_card* marian = snd_pcm_substream_chip(substream);
-	MDEBUG("snd_marian_mmap(%d, %016lx)\n", substream->stream, vma->vm_start);
-	MDEBUG("  substream->runtime.dma_addr = %016lx (%016lx >> %u)\n  substream->runtime.dma_area = %016lx\n  substream->runtime.dma_bytes = %u\n",
-			substream->runtime->dma_addr >> PAGE_SHIFT, substream->runtime->dma_addr,
-			PAGE_SHIFT, substream->runtime->dma_area, substream->runtime->dma_bytes);
-	MDEBUG("  vma->vm_start = %016lx\n  vma->vm_end = %016lx\n  vma->vm_page_prot = %016lx\n",
+	struct marian_card* marian = snd_pcm_substream_chip(substream);
+	dev_dbg(marian->card->dev,
+		"snd_marian_mmap(%d, %016lx)\n", substream->stream, vma->vm_start);
+	dev_dbg(marian->card->dev,
+		"  substream->runtime.dma_addr = %016lx (%016lx >> %u)\n  substream->runtime.dma_area = %016lx\n  substream->runtime.dma_bytes = %u\n",
+		substream->runtime->dma_addr >> PAGE_SHIFT, substream->runtime->dma_addr,
+		PAGE_SHIFT, substream->runtime->dma_area, substream->runtime->dma_bytes);
+	dev_dbg(marian->card->dev,
+		"  vma->vm_start = %016lx\n  vma->vm_end = %016lx\n  vma->vm_page_prot = %016lx\n",
 		vma->vm_start, vma->vm_end, vma->vm_page_prot);
 
 	if (remap_pfn_range(vma, vma->vm_start, substream->runtime->dma_addr >> PAGE_SHIFT,
 				vma->vm_end - vma->vm_start, vma->vm_page_prot) < 0) {
-		MERROR("remap_pfn_range failed\n");
+		dev_err(marian->card->dev, "remap_pfn_range failed\n");
 		return -EIO;
 	}
 
@@ -819,9 +815,6 @@ static int marian_channel_info(struct snd_pcm_substream *substream,
 		 *marian->period_size * marian->desc->dma_ch_offset * 4
 		+ info->channel * marian->period_size * 4) * 8;
 	info->step = 32;
-
-	MDEBUG("marian_channel_info(%d, %d) -> offset %d\n",
-		substream->stream, info->channel, info->first/8);
 
 	return 0;
 }

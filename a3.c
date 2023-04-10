@@ -50,8 +50,9 @@ static int marian_a3_clock_source_get(struct snd_kcontrol *kcontrol,
 		ucontrol->value.enumerated.item[0] = 4;
 		break;
 	default:
-		MDEBUG("marian_a3_clock_source_get: Illegal value for clock_source! (%d)\n",
-				marian->clock_source);
+		dev_dbg(marian->card->dev,
+			"marian_a3_clock_source_get: Illegal value for clock_source! (%d)\n",
+			marian->clock_source);
 		return -1;
 	}
 
@@ -143,8 +144,6 @@ void marian_a3_prepare(struct marian_card *marian)
 {
 	uint32_t mask = 0x00FFFFFF;
 
-	MDEBUG("marian_a3_prepare()\n");
-
 	// arm channels
 	WRITEL(mask, marian->iobase + 0x08);
 	WRITEL(mask, marian->iobase + 0x0C);
@@ -157,8 +156,6 @@ void marian_a3_prepare(struct marian_card *marian)
 int marian_a3_init(struct marian_card *marian)
 {
 	int err;
-
-	MDEBUG("marian_a3_init()\n");
 
 	err = marian_generic_init(marian);
 

@@ -80,7 +80,7 @@ void marian_generic_set_dco(struct marian_card *marian, unsigned int freq, unsig
 	uint64_t val, v2;
 	int64_t detune;
 
-	MDEBUG("marian_generic_set_dco(.., %u, %u)\n", freq, millis);
+	dev_dbg(marian->card->dev, "marian_generic_set_dco(.., %u, %u)\n", freq, millis);
 
 	val = (freq * 1000 + millis) * marian->speedmode;
 	val <<= 36;
@@ -101,7 +101,7 @@ void marian_generic_set_dco(struct marian_card *marian, unsigned int freq, unsig
 	val = div_u64(val, 80000000);
 	val = div_u64(val, 1000);
 
-	MDEBUG("  -> 0x%016llx (%llu)\n", val, val);
+	dev_dbg(marian->card->dev, "  -> 0x%016llx (%llu)\n", val, val);
 	WRITEL(val, marian->iobase + 0x88);
 
 	marian->dco = freq;
@@ -278,8 +278,6 @@ int marian_generic_dco_create(struct marian_card *marian)
 
 int marian_generic_init(struct marian_card *marian)
 {
-	MDEBUG("marian_generic_init()\n");
-
 	if (!marian->desc->set_speedmode)
 		marian->desc->set_speedmode = marian_generic_set_speedmode;
 
@@ -376,8 +374,6 @@ void marian_proc_ports_generic(struct marian_card *marian, struct snd_info_buffe
 
 void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speedmode)
 {
-	MDEBUG("marian_generic_set_speedmode(.., %u)\n", speedmode);
-
 	if (speedmode > marian->desc->speedmode_max)
 		return;
 
@@ -486,12 +482,13 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 	uint32_t buf = 0;
 	unsigned int i;
 
-	MDEBUG("spi_transfer(.., 0x%04x, %u, [%02x, %02x], %u, ..)\n", cs, bits_write,
-				data_write[0], data_write[1], bits_read);
+	dev_dbg(marian->card->dev,
+		"spi_transfer(.., 0x%04x, %u, [%02x, %02x], %u, ..)\n", cs, bits_write,
+		data_write[0], data_write[1], bits_read);
 
 	SPI_WAIT_FOR_AR(tries);
 	if (tries == 0) {
-		MDEBUG("marian_spi_transfer: Resetting SPI bus\n");
+		dev_dbg(marian->card->dev, "marian_spi_transfer: Resetting SPI bus\n");
 		writel(0x1234, marian->iobase + 0x70);
 	}
 
@@ -518,7 +515,8 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 			tries = 10;
 			SPI_WAIT_FOR_AR(tries);
 			if (tries == 0) {
-				MDEBUG("marian_spi_transfer: bus didn't signal AR\n");
+				dev_dbg(marian->card->dev,
+					"marian_spi_transfer: bus didn't signal AR\n");
 				return -1;
 			}
 

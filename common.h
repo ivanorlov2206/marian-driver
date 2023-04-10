@@ -15,27 +15,40 @@
 #include <sound/initval.h>
 #include <sound/info.h>
 
+#ifdef DEBUG
+#define MDEBUG(format, args...) snd_printdd(KERN_INFO format, ## args)
+#else
+#define MDEBUG(format, args...)
+#endif
+
+#define MERROR(format, args...) snd_printk(KERN_ERR format, ## args)
 
 struct marian_card;
 struct marian_card_descriptor;
 
 
-typedef void (*marian_hw_constraints_func)(struct marian_card*, struct snd_pcm_substream*, struct snd_pcm_hw_params*);
-typedef void (*marian_controls_func)(struct marian_card*);
-typedef int (*marian_init_func)(struct marian_card*);
-typedef void (*marian_free_func)(struct marian_card*);
-typedef void (*marian_prepare_func)(struct marian_card*);
-typedef void (*marian_init_codec_func)(struct marian_card*);
-typedef void (*marian_set_speedmode_func)(struct marian_card*, unsigned int speedmode);
-typedef void (*marian_proc_status_func)(struct marian_card*, struct snd_info_buffer *buffer);
-typedef void (*marian_proc_ports_func)(struct marian_card*, struct snd_info_buffer *buffer, unsigned int type);
+typedef void (*marian_hw_constraints_func)(struct marian_card *marian,
+		struct snd_pcm_substream *substream, struct snd_pcm_hw_params *params);
+typedef void (*marian_controls_func)(struct marian_card *marian);
+typedef int (*marian_init_func)(struct marian_card *marian);
+typedef void (*marian_free_func)(struct marian_card *marian);
+typedef void (*marian_prepare_func)(struct marian_card *marian);
+typedef void (*marian_init_codec_func)(struct marian_card *marian);
+typedef void (*marian_set_speedmode_func)(struct marian_card *marian, unsigned int speedmode);
+typedef void (*marian_proc_status_func)(struct marian_card *marian, struct snd_info_buffer *buffer);
+typedef void (*marian_proc_ports_func)(struct marian_card *marian, struct snd_info_buffer *buffer,
+					unsigned int type);
 
-#define WRITEL(val, adr) { snd_printdd(KERN_DEBUG "writel(%02x, %08x) [%s:%u]\n", val, adr, __FILE__, __LINE__); writel(val, adr); }
+#define WRITEL(val, adr) { \
+			snd_printdd(KERN_DEBUG "writel(%02x, %08x) [%s:%u]\n", val, \
+				adr, __FILE__, __LINE__); \
+				writel(val, adr); \
+			}
 
 
 struct marian_card_descriptor {
-	char* name;
-	char* port_names;
+	char *name;
+	char *port_names;
 	unsigned int speedmode_max;
 	unsigned int ch_in;
 	unsigned int ch_out;
@@ -68,13 +81,13 @@ struct marian_card_descriptor {
 
 
 struct marian_card {
-	struct marian_card_descriptor* desc;
+	struct marian_card_descriptor *desc;
 
 	struct snd_pcm_substream *playback_substream;
 	struct snd_pcm_substream *capture_substream;
 
-	struct snd_card *card;	
-	struct snd_pcm *pcm;		
+	struct snd_card *card;
+	struct snd_pcm *pcm;
 	struct snd_dma_buffer dmabuf;
 
 	struct pci_dev *pci;
@@ -92,23 +105,23 @@ struct marian_card {
 	unsigned int speedmode;
 
 	/* 0..15, meaning depending on the card type */
-	unsigned int clock_source; 
+	unsigned int clock_source;
 
 	/* Frequency of the internal oscillator (Hertz) */
 	unsigned int dco;
 	/* [0..1) part of the internal oscillator frequency (milli Hertz) */
 	unsigned int dco_millis;
- 
-	/* [-200 .. 200] Two semitone 'musical' adjustment */ 
+
+	/* [-200 .. 200] Two semitone 'musical' adjustment */
 	int detune;
 
 	/* WCK input termination on (1)/off (0) */
 	unsigned int wck_term;
-	
+
 	/* WCK output source */
 	unsigned int wck_output;
 
-	void* card_specific;
+	void *card_specific;
 };
 
 
@@ -123,9 +136,37 @@ struct marian_card {
 #define SERAPH_WR_DMA_ENABLE      0x84
 #define SERAPH_WR_IE_ENABLE       0xAC
 
+#define PCI_VENDOR_ID_MARIAN            0x1382
+#define PCI_DEVICE_ID_MARIAN_SERAPH_A3  0x4630
+#define PCI_DEVICE_ID_MARIAN_C_BOX      0x4640
+#define PCI_DEVICE_ID_MARIAN_SERAPH_AD2 0x4720
+#define PCI_DEVICE_ID_MARIAN_SERAPH_D4  0x4840
+#define PCI_DEVICE_ID_MARIAN_SERAPH_D8  0x4880
+#define PCI_DEVICE_ID_MARIAN_SERAPH_8   0x4980
+#define PCI_DEVICE_ID_MARIAN_SERAPH_M2  0x5020
+
+#define RATE_SLOW 54000
+#define RATE_NORMAL 108000
+
+#define SPEEDMODE_SLOW 1
+#define SPEEDMODE_NORMAL 2
+#define SPEEDMODE_FAST 4
 
 #define MARIAN_PORTS_TYPE_INPUT 0
 #define MARIAN_PORTS_TYPE_OUTPUT 1
 
+#define ERR_DEAD_WRITE 1
+#define ERR_DEAD_READ (1 << 1)
+#define ERR_DATA_LOST (1 << 2)
+#define ERR_PAGE_CONF (1 << 3)
+#define ERR_INT_PLAY (1 << 10)
+#define ERR_INT_REC (1 << 13)
+
+#define STATUS_ST_READY (1 << 4)
+#define STATUS_INT_PLAY (1 << 8)
+#define STATUS_INT_PPLAY (1 << 9)
+#define STATUS_INT_REC (1 << 11)
+#define STATUS_INT_PREC (1 << 12)
+#define STATUS_INT_PREP (1 << 14)
 
 #endif

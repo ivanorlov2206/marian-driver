@@ -777,7 +777,7 @@ static snd_pcm_uframes_t snd_marian_hw_pointer(struct snd_pcm_substream *substre
 
 static int snd_marian_mmap(struct snd_pcm_substream *substream, struct vm_area_struct *vma)
 {
-	struct marian_card* marian = snd_pcm_substream_chip(substream);
+	struct marian_card *marian = snd_pcm_substream_chip(substream);
 	dev_dbg(marian->card->dev,
 		"snd_marian_mmap(%d, %016lx)\n", substream->stream, vma->vm_start);
 	dev_dbg(marian->card->dev,

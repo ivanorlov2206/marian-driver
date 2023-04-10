@@ -784,7 +784,7 @@ static int marian_channel_info(struct snd_pcm_substream *substream,
 
 	info->offset = 0;
 	info->first = (((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? 1 : 0)
-		 *marian->period_size * marian->desc->dma_ch_offset * 4
+		* marian->period_size * marian->desc->dma_ch_offset * 4
 		+ info->channel * marian->period_size * 4) * 8;
 	info->step = 32;
 

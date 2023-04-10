@@ -326,31 +326,31 @@ module_exit(alsa_card_marian_exit);
 
 static void print_irq_status(unsigned int v)
 {
-	snd_printdd(KERN_INFO "IRQ status 0x%08x\n", v);
+	snd_printdd(KERN_DEBUG "IRQ status 0x%08x\n", v);
 	if (v & ERR_DEAD_WRITE)
-		snd_printdd(KERN_INFO "  -> ERROR, dead write (PCI wr fault)\n");
+		snd_printdd(KERN_DEBUG "  -> ERROR, dead write (PCI wr fault)\n");
 	if (v & ERR_DEAD_READ)
-		snd_printdd(KERN_INFO "  -> ERROR, dead read (PCI rd fault)\n");
+		snd_printdd(KERN_DEBUG "  -> ERROR, dead read (PCI rd fault)\n");
 	if (v & ERR_DATA_LOST)
-		snd_printdd(KERN_INFO "  -> ERROR, data lost (PCI transfer not complete)\n");
+		snd_printdd(KERN_DEBUG "  -> ERROR, data lost (PCI transfer not complete)\n");
 	if (v & ERR_PAGE_CONF)
-		snd_printdd(KERN_INFO "  -> ERROR, page conflict (transfer not complete)\n");
+		snd_printdd(KERN_DEBUG "  -> ERROR, page conflict (transfer not complete)\n");
 	if (v & STATUS_ST_READY)
-		snd_printdd(KERN_INFO "  -> start ready\n");
+		snd_printdd(KERN_DEBUG "  -> start ready\n");
 	if (v & STATUS_INT_PLAY)
-		snd_printdd(KERN_INFO "  -> interrupt play\n");
+		snd_printdd(KERN_DEBUG "  -> interrupt play\n");
 	if (v & STATUS_INT_PPLAY)
-		snd_printdd(KERN_INFO "  -> interrupt play page\n");
+		snd_printdd(KERN_DEBUG "  -> interrupt play page\n");
 	if (v & ERR_INT_PLAY)
-		snd_printdd(KERN_INFO "  -> ERROR, interrupt play not executed\n");
+		snd_printdd(KERN_DEBUG "  -> ERROR, interrupt play not executed\n");
 	if (v & STATUS_INT_REC)
-		snd_printdd(KERN_INFO "  -> interrupt record\n");
+		snd_printdd(KERN_DEBUG "  -> interrupt record\n");
 	if (v & STATUS_INT_PREC)
-		snd_printdd(KERN_INFO "  -> interrupt record page\n");
+		snd_printdd(KERN_DEBUG "  -> interrupt record page\n");
 	if (v & ERR_INT_REC)
-		snd_printdd(KERN_INFO "  -> ERROR, interrupt record not executed\n");
+		snd_printdd(KERN_DEBUG "  -> ERROR, interrupt record not executed\n");
 	if (v & STATUS_INT_PREP)
-		snd_printdd(KERN_INFO "  -> interrupt prepare\n");
+		snd_printdd(KERN_DEBUG "  -> interrupt prepare\n");
 }
 
 static irqreturn_t snd_marian_interrupt(int irq, void *dev_id)

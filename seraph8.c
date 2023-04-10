@@ -11,7 +11,7 @@
 //
 
 static int marian_seraph8_clock_source_info(struct snd_kcontrol *kcontrol,
-						struct snd_ctl_elem_info *uinfo)
+					    struct snd_ctl_elem_info *uinfo)
 {
 	static char *texts[] = { "Internal", "Sync Bus" };
 
@@ -24,9 +24,8 @@ static int marian_seraph8_clock_source_info(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-
 static int marian_seraph8_clock_source_get(struct snd_kcontrol *kcontrol,
-					struct snd_ctl_elem_value *ucontrol)
+					   struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -47,9 +46,8 @@ static int marian_seraph8_clock_source_get(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-
 static int marian_seraph8_clock_source_put(struct snd_kcontrol *kcontrol,
-					struct snd_ctl_elem_value *ucontrol)
+					   struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
@@ -65,7 +63,6 @@ static int marian_seraph8_clock_source_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-
 static int marian_seraph8_clock_source_create(struct marian_card *marian, char *label)
 {
 	struct snd_kcontrol_new c = {
@@ -80,14 +77,12 @@ static int marian_seraph8_clock_source_create(struct marian_card *marian, char *
 	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
 }
 
-
 void marian_seraph8_create_controls(struct marian_card *marian)
 {
 	marian_seraph8_clock_source_create(marian, "Clock Source");
 	marian_generic_speedmode_create(marian);
 	marian_generic_dco_create(marian);
 }
-
 
 void marian_seraph8_prepare(struct marian_card *marian)
 {
@@ -101,7 +96,6 @@ void marian_seraph8_prepare(struct marian_card *marian)
 	WRITEL(mask, marian->iobase + 0x08);
 	WRITEL(mask, marian->iobase + 0x0C);
 }
-
 
 void marian_seraph8_init_codec(struct marian_card *marian)
 {
@@ -124,17 +118,16 @@ void marian_seraph8_init_codec(struct marian_card *marian)
 	buf_out[0] = 0xA1;
 	buf_out[1] = 0x03;
 
-	marian_spi_transfer(marian, 0x1E, 16, (uint8_t *) &buf_out, 0, NULL);
+	marian_spi_transfer(marian, 0x1E, 16, (uint8_t *)&buf_out, 0, NULL);
 
 	buf_out[0] = 0xA2;
 	buf_out[1] = 0x4D;
 
-	marian_spi_transfer(marian, 0x1E, 16, (uint8_t *) &buf_out, 0, NULL);
+	marian_spi_transfer(marian, 0x1E, 16, (uint8_t *)&buf_out, 0, NULL);
 
 	// switch input mute off
 	WRITEL(0x0, marian->iobase + 0x18);
 }
-
 
 void marian_seraph8_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)
 {
@@ -145,7 +138,7 @@ void marian_seraph8_proc_status(struct marian_card *marian, struct snd_info_buff
 
 	marian_proc_status_generic(marian, buffer);
 
-	buf = (uint32_t *) marian->dmabuf.area;
+	buf = (uint32_t *)marian->dmabuf.area;
 
 	for (i = 0; i < 512; i++) {
 		if (i % 64 == 0)

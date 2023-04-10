@@ -19,7 +19,6 @@
  *
  */
 
-
 #include <linux/version.h>
 
 #include "common.h"
@@ -28,14 +27,13 @@
 #include "m2.h"
 #include "seraph8.h"
 
-
 static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
-				struct marian_card_descriptor *desc, unsigned int idx);
+			     struct marian_card_descriptor *desc, unsigned int idx);
 static void snd_marian_card_free(struct snd_card *card);
 
 // ALSA interface
 static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
-				struct marian_card_descriptor *desc, unsigned int idx);
+			     struct marian_card_descriptor *desc, unsigned int idx);
 static void snd_marian_card_free(struct snd_card *card);
 static int snd_marian_playback_open(struct snd_pcm_substream *substream);
 static int snd_marian_playback_release(struct snd_pcm_substream *substream);
@@ -54,8 +52,6 @@ static void snd_marian_proc_ports_in(struct snd_info_entry *entry, struct snd_in
 static void snd_marian_proc_ports_out(struct snd_info_entry *entry, struct snd_info_buffer *buffer);
 static int snd_marian_mmap(struct snd_pcm_substream *substream, struct vm_area_struct *vma);
 
-
-
 static struct marian_card_descriptor descriptors[7] = {
 	{
 		.name = "Seraph A3",
@@ -63,7 +59,7 @@ static struct marian_card_descriptor descriptors[7] = {
 		.ch_in = 24,
 		.ch_out = 24,
 		.dma_ch_offset = 32,
-		.dma_bufsize = 2*32*2*2048*4,
+		.dma_bufsize = 2 * 32 * 2 * 2048 * 4,
 		.create_controls = marian_a3_create_controls,
 		.prepare = marian_a3_prepare,
 		.init_card = marian_a3_init,
@@ -80,9 +76,9 @@ static struct marian_card_descriptor descriptors[7] = {
 			.rate_max = 113000,
 			.channels_min = 1,
 			.channels_max = 24,
-			.buffer_bytes_max = 2*24*2*4096*4,
-			.period_bytes_min = 16*4,
-			.period_bytes_max = 2048*4*24,
+			.buffer_bytes_max = 2 * 24 * 2 * 4096 * 4,
+			.period_bytes_min = 16 * 4,
+			.period_bytes_max = 2048 * 4 * 24,
 			.periods_min = 2,
 			.periods_max = 2
 		},
@@ -97,9 +93,9 @@ static struct marian_card_descriptor descriptors[7] = {
 			.rate_max = 113000,
 			.channels_min = 1,
 			.channels_max = 24,
-			.buffer_bytes_max = 2*24*2*4096*4,
-			.period_bytes_min = 16*4,
-			.period_bytes_max = 2048*4*24,
+			.buffer_bytes_max = 2 * 24 * 2 * 4096 * 4,
+			.period_bytes_min = 16 * 4,
+			.period_bytes_max = 2048 * 4 * 24,
 			.periods_min = 2,
 			.periods_max = 2
 		}
@@ -128,7 +124,7 @@ static struct marian_card_descriptor descriptors[7] = {
 		.ch_in = 8,
 		.ch_out = 8,
 		.dma_ch_offset = 32,
-		.dma_bufsize = 2*32*2*2048*4,
+		.dma_bufsize = 2 * 32 * 2 * 2048 * 4,
 		.create_controls = marian_seraph8_create_controls,
 		.prepare = marian_seraph8_prepare,
 		.init_codec = marian_seraph8_init_codec,
@@ -145,9 +141,9 @@ static struct marian_card_descriptor descriptors[7] = {
 			.rate_max = 216000,
 			.channels_min = 1,
 			.channels_max = 8,
-			.buffer_bytes_max = 2*8*2*4096*4,
-			.period_bytes_min = 16*4,
-			.period_bytes_max = 2048*4*8,
+			.buffer_bytes_max = 2 * 8 * 2 * 4096 * 4,
+			.period_bytes_min = 16 * 4,
+			.period_bytes_max = 2048 * 4 * 8,
 			.periods_min = 2,
 			.periods_max = 2
 		},
@@ -163,9 +159,9 @@ static struct marian_card_descriptor descriptors[7] = {
 			.rate_max = 216000,
 			.channels_min = 1,
 			.channels_max = 8,
-			.buffer_bytes_max = 2*8*2*4096*4,
-			.period_bytes_min = 16*4,
-			.period_bytes_max = 2048*4*8,
+			.buffer_bytes_max = 2 * 8 * 2 * 4096 * 4,
+			.period_bytes_min = 16 * 4,
+			.period_bytes_max = 2048 * 4 * 8,
 			.periods_min = 2,
 			.periods_max = 2
 		}
@@ -176,7 +172,7 @@ static struct marian_card_descriptor descriptors[7] = {
 		.ch_in = 128,
 		.ch_out = 128,
 		.dma_ch_offset = 128,
-		.dma_bufsize = 2*128*2*2048*4,
+		.dma_bufsize = 2 * 128 * 2 * 2048 * 4,
 		.hw_constraints_func = marian_m2_constraints,
 		.create_controls = marian_m2_create_controls,
 		.init_card = marian_m2_init,
@@ -198,9 +194,9 @@ static struct marian_card_descriptor descriptors[7] = {
 			.rate_max = 113000,
 			.channels_min = 128,
 			.channels_max = 128,
-			.buffer_bytes_max = 2*128*2*1024*4,
-			.period_bytes_min = 16*4,
-			.period_bytes_max = 1024*4*128,
+			.buffer_bytes_max = 2 * 128 * 2 * 1024 * 4,
+			.period_bytes_min = 16 * 4,
+			.period_bytes_max = 1024 * 4 * 128,
 			.periods_min = 2,
 			.periods_max = 2
 		},
@@ -216,9 +212,9 @@ static struct marian_card_descriptor descriptors[7] = {
 			.rate_max = 113000,
 			.channels_min = 128,
 			.channels_max = 128,
-			.buffer_bytes_max = 2*128*2*1024*4,
-			.period_bytes_min = 16*4,
-			.period_bytes_max = 1024*4*128,
+			.buffer_bytes_max = 2 * 128 * 2 * 1024 * 4,
+			.period_bytes_min = 16 * 4,
+			.period_bytes_max = 1024 * 4 * 128,
 			.periods_min = 2,
 			.periods_max = 2
 		}
@@ -234,7 +230,6 @@ static struct marian_card_descriptor descriptors[7] = {
 MODULE_AUTHOR("Florin Faber <faberman@linuxproaudio.org>");
 MODULE_DESCRIPTION("MARIAN Seraph series");
 MODULE_LICENSE("GPL");
-
 
 static const struct pci_device_id snd_marian_ids[] = {
 	{PCI_DEVICE(PCI_VENDOR_ID_MARIAN, PCI_DEVICE_ID_MARIAN_SERAPH_A3),
@@ -256,10 +251,8 @@ static const struct pci_device_id snd_marian_ids[] = {
 
 MODULE_DEVICE_TABLE(pci, snd_marian_ids);
 
-
 static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;	/* Index 0-MAX */
 static char *id[SNDRV_CARDS] = SNDRV_DEFAULT_STR;	/* ID for this card */
-
 
 static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci_id)
 {
@@ -277,10 +270,10 @@ static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 16, 0)
 	err = snd_card_create(index[dev], id[dev],
-		THIS_MODULE, sizeof(struct marian_card), &card);
+			      THIS_MODULE, sizeof(struct marian_card), &card);
 #else
 	err = snd_card_new(&pci->dev, index[dev], id[dev],
-		THIS_MODULE, sizeof(struct marian_card), &card);
+			   THIS_MODULE, sizeof(struct marian_card), &card);
 #endif
 
 	if (err < 0)
@@ -299,13 +292,11 @@ static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci
 	return 0;
 }
 
-
 static void snd_marian_remove(struct pci_dev *pci)
 {
 	snd_card_free(pci_get_drvdata(pci));
 	pci_set_drvdata(pci, NULL);
 }
-
 
 static struct pci_driver driver = {
 	.name = "MARIAN",
@@ -313,7 +304,6 @@ static struct pci_driver driver = {
 	.probe = snd_marian_probe,
 	.remove = snd_marian_remove,
 };
-
 
 static int __init alsa_card_marian_init(void)
 {
@@ -328,13 +318,11 @@ static void __exit alsa_card_marian_exit(void)
 module_init(alsa_card_marian_init);
 module_exit(alsa_card_marian_exit);
 
-
 /*
  *
  * card interface
  *
  */
-
 
 static void print_irq_status(unsigned int v)
 {
@@ -365,10 +353,9 @@ static void print_irq_status(unsigned int v)
 		snd_printdd(KERN_INFO "  -> interrupt prepare\n");
 }
 
-
 static irqreturn_t snd_marian_interrupt(int irq, void *dev_id)
 {
-	struct marian_card *marian = (struct marian_card *) dev_id;
+	struct marian_card *marian = (struct marian_card *)dev_id;
 	unsigned int irq_status;
 
 	irq_status = readl(marian->iobase + SERAPH_RD_IRQ_STATUS);
@@ -386,13 +373,11 @@ static irqreturn_t snd_marian_interrupt(int irq, void *dev_id)
 	return IRQ_NONE;
 }
 
-
 /*
  *
  * ALSA interface
  *
  */
-
 
 static const struct snd_pcm_ops snd_marian_playback_ops = {
 	.open = snd_marian_playback_open,
@@ -418,9 +403,8 @@ static const struct snd_pcm_ops snd_marian_capture_ops = {
 	.mmap = snd_marian_mmap,
 };
 
-
 static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
-				struct marian_card_descriptor *desc, unsigned int idx)
+			     struct marian_card_descriptor *desc, unsigned int idx)
 {
 	struct snd_info_entry *entry;
 	struct marian_card *marian = card->private_data;
@@ -452,11 +436,11 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	marian->port = pci_resource_start(pci, 0);
 	len = pci_resource_len(pci, 0);
 	dev_dbg(&pci->dev, "grabbing memory region 0x%lx-0x%lx (%d bytes)..\n",
-		marian->port, marian->port+len-1, len);
+		marian->port, marian->port + len - 1, len);
 	marian->iobase = pci_iomap(pci, 0, 0);
 	if (!marian->iobase) {
 		dev_err(&pci->dev, "unable to grab region 0x%lx-0x%lx\n",
-			marian->port, marian->port+len-1);
+			marian->port, marian->port + len - 1);
 		return -EBUSY;
 	}
 
@@ -489,7 +473,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	len = PAGE_ALIGN(desc->dma_bufsize);
 	dev_dbg(card->dev, "Allocating %d bytes DMA buffer\n", len);
 	err = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, &pci->dev,
-				desc->dma_bufsize, &marian->dmabuf);
+				  desc->dma_bufsize, &marian->dmabuf);
 	if (err < 0) {
 		dev_err(card->dev, "Could not allocate %d Bytes (%d)\n", len, err);
 		while (snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, &pci->dev, len, &marian->dmabuf) < 0)
@@ -503,9 +487,9 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	}
 
 	dev_dbg(card->dev, "dmabuf.area = 0x%lx\n",
-		(unsigned long) marian->dmabuf.area); // TODO fix address conversions
-	dev_dbg(card->dev, "dmabuf.addr = 0x%lx\n", (unsigned long) marian->dmabuf.addr);
-	dev_dbg(card->dev, "dmabuf.bytes = %d\n", (int) marian->dmabuf.bytes);
+		(unsigned long)marian->dmabuf.area); // TODO fix address conversions
+	dev_dbg(card->dev, "dmabuf.addr = 0x%lx\n", (unsigned long)marian->dmabuf.addr);
+	dev_dbg(card->dev, "dmabuf.bytes = %d\n", (int)marian->dmabuf.bytes);
 
 	/* set up /proc entries */
 	if (!snd_card_proc_new(card, "status", &entry))
@@ -529,7 +513,6 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	return snd_card_register(card);
 }
 
-
 static void snd_marian_card_free(struct snd_card *card)
 {
 	struct marian_card *marian = card->private_data;
@@ -540,7 +523,7 @@ static void snd_marian_card_free(struct snd_card *card)
 	snd_dma_free_pages(&marian->dmabuf);
 
 	if (marian->irq >= 0)
-		free_irq(marian->irq, (void *) marian);
+		free_irq(marian->irq, (void *)marian);
 
 	if (marian->iobase)
 		pci_iounmap(marian->pci, marian->iobase);
@@ -550,7 +533,6 @@ static void snd_marian_card_free(struct snd_card *card)
 
 	pci_disable_device(marian->pci);
 }
-
 
 static int snd_marian_playback_open(struct snd_pcm_substream *substream)
 {
@@ -565,7 +547,6 @@ static int snd_marian_playback_open(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-
 static int snd_marian_playback_release(struct snd_pcm_substream *substream)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
@@ -574,7 +555,6 @@ static int snd_marian_playback_release(struct snd_pcm_substream *substream)
 
 	return 0;
 }
-
 
 static int snd_marian_capture_open(struct snd_pcm_substream *substream)
 {
@@ -589,7 +569,6 @@ static int snd_marian_capture_open(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-
 static int snd_marian_capture_release(struct snd_pcm_substream *substream)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
@@ -599,9 +578,8 @@ static int snd_marian_capture_release(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-
 static int snd_marian_hw_params(struct snd_pcm_substream *substream,
-			       struct snd_pcm_hw_params *params)
+				struct snd_pcm_hw_params *params)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
 	unsigned int speedmode;
@@ -618,7 +596,7 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 	dev_dbg(marian->card->dev,
 		"snd_marian_hw_params(): period size: %d\n", marian->period_size);
 
-	size = params_buffer_size(params)*params_channels(params)*4;
+	size = params_buffer_size(params) * params_channels(params) * 4;
 	dev_dbg(marian->card->dev,
 		"snd_marian_hw_params(): period buf size: %d\n", size);
 
@@ -650,27 +628,27 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 	dev_dbg(marian->card->dev, "  stream    : %s\n",
 		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture");
 	dev_dbg(marian->card->dev,
-		"  dma_area  : 0x%lx\n", (unsigned long) substream->runtime->dma_area);
+		"  dma_area  : 0x%lx\n", (unsigned long)substream->runtime->dma_area);
 	dev_dbg(marian->card->dev,
-		"  dma_addr  : 0x%lx\n", (unsigned long) substream->runtime->dma_addr);
+		"  dma_addr  : 0x%lx\n", (unsigned long)substream->runtime->dma_addr);
 	dev_dbg(marian->card->dev, "  dma_bytes : 0x%lx (%d)\n",
-		(unsigned long) substream->runtime->dma_bytes,
-		(int) substream->runtime->dma_bytes);
+		(unsigned long)substream->runtime->dma_bytes,
+		(int)substream->runtime->dma_bytes);
 
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 		dev_dbg(marian->card->dev, "  setting card's DMA ADR to %08x\n",
-			(unsigned int) marian->capture_substream->runtime->dma_addr);
+			(unsigned int)marian->capture_substream->runtime->dma_addr);
 		WRITEL(marian->capture_substream->runtime->dma_addr,
-			marian->iobase + SERAPH_WR_DMA_ADR); // TODO Fix address conversions
+		       marian->iobase + SERAPH_WR_DMA_ADR); // TODO Fix address conversions
 	} else if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		dev_dbg(marian->card->dev, "  setting card's DMA ADR to %08x\n",
-			(unsigned int) marian->playback_substream->runtime->dma_addr);
+			(unsigned int)marian->playback_substream->runtime->dma_addr);
 		WRITEL(marian->playback_substream->runtime->dma_addr,
-			marian->iobase + SERAPH_WR_DMA_ADR);
+		       marian->iobase + SERAPH_WR_DMA_ADR);
 	}
 	dev_dbg(marian->card->dev,
-		"  setting card's DMA block count to %d\n", marian->period_size/16);
-	WRITEL(marian->period_size/16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
+		"  setting card's DMA block count to %d\n", marian->period_size / 16);
+	WRITEL(marian->period_size / 16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
 
 	/* apply optional card specific hw constraints */
 	if (marian->desc->hw_constraints_func)
@@ -678,7 +656,6 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 
 	return 0;
 }
-
 
 static int snd_marian_hw_free(struct snd_pcm_substream *substream)
 {
@@ -693,7 +670,6 @@ static int snd_marian_hw_free(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-
 static int snd_marian_prepare(struct snd_pcm_substream *substream)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
@@ -702,14 +678,14 @@ static int snd_marian_prepare(struct snd_pcm_substream *substream)
 		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture");
 	// TODO Wrong conversions
 	dev_dbg(marian->card->dev, "  dma_area  : 0x%lx\n",
-		(unsigned long) substream->runtime->dma_area);
+		(unsigned long)substream->runtime->dma_area);
 	dev_dbg(marian->card->dev, "  dma_addr  : 0x%lx\n",
-		(unsigned long) substream->runtime->dma_addr);
+		(unsigned long)substream->runtime->dma_addr);
 	dev_dbg(marian->card->dev, "  dma_bytes : 0x%lx (%d)\n",
-		(unsigned long) substream->runtime->dma_bytes,
-					(int) substream->runtime->dma_bytes);
+		(unsigned long)substream->runtime->dma_bytes,
+					(int)substream->runtime->dma_bytes);
 	dev_dbg(marian->card->dev, "  dma_buffer: 0x%lx\n",
-		(unsigned long) substream->runtime->dma_buffer_p);
+		(unsigned long)substream->runtime->dma_buffer_p);
 
 	if (marian->desc->prepare)
 		marian->desc->prepare(marian);
@@ -721,12 +697,10 @@ static int snd_marian_prepare(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-
 static void marian_silence(struct marian_card *marian)
 {
 	memset(marian->dmabuf.area, 0, marian->dmabuf.bytes);
 }
-
 
 static int snd_marian_trigger(struct snd_pcm_substream *substream, int cmd)
 {
@@ -766,7 +740,6 @@ static int snd_marian_trigger(struct snd_pcm_substream *substream, int cmd)
 	return 0;
 }
 
-
 static snd_pcm_uframes_t snd_marian_hw_pointer(struct snd_pcm_substream *substream)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
@@ -774,10 +747,10 @@ static snd_pcm_uframes_t snd_marian_hw_pointer(struct snd_pcm_substream *substre
 	return readl(marian->iobase + SERAPH_RD_HWPOINTER);
 }
 
-
 static int snd_marian_mmap(struct snd_pcm_substream *substream, struct vm_area_struct *vma)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
+
 	dev_dbg(marian->card->dev,
 		"snd_marian_mmap(%d, %016lx)\n", substream->stream, vma->vm_start);
 	dev_dbg(marian->card->dev,
@@ -789,14 +762,13 @@ static int snd_marian_mmap(struct snd_pcm_substream *substream, struct vm_area_s
 		vma->vm_start, vma->vm_end, vma->vm_page_prot);
 
 	if (remap_pfn_range(vma, vma->vm_start, substream->runtime->dma_addr >> PAGE_SHIFT,
-				vma->vm_end - vma->vm_start, vma->vm_page_prot) < 0) {
+			    vma->vm_end - vma->vm_start, vma->vm_page_prot) < 0) {
 		dev_err(marian->card->dev, "remap_pfn_range failed\n");
 		return -EIO;
 	}
 
 	return 0;
 }
-
 
 /**
  * Capture and playback data lie one after another in the buffer.
@@ -806,7 +778,7 @@ static int snd_marian_mmap(struct snd_pcm_substream *substream, struct vm_area_s
  * each channel's buffer position using snd_pcm_channel_info->first.
  **/
 static int marian_channel_info(struct snd_pcm_substream *substream,
-				struct snd_pcm_channel_info *info)
+			       struct snd_pcm_channel_info *info)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
 
@@ -819,17 +791,15 @@ static int marian_channel_info(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-
 static int snd_marian_ioctl(struct snd_pcm_substream *substream, unsigned int cmd, void *arg)
 {
 	switch (cmd) {
 	case SNDRV_PCM_IOCTL1_CHANNEL_INFO:
-		return marian_channel_info(substream, (struct snd_pcm_channel_info *) arg);
+		return marian_channel_info(substream, (struct snd_pcm_channel_info *)arg);
 	}
 
 	return snd_pcm_lib_ioctl(substream, cmd, arg);
 }
-
 
 static void snd_marian_proc_status(struct snd_info_entry  *entry, struct snd_info_buffer *buffer)
 {
@@ -841,7 +811,6 @@ static void snd_marian_proc_status(struct snd_info_entry  *entry, struct snd_inf
 		marian_proc_status_generic(marian, buffer);
 }
 
-
 static void snd_marian_proc_ports_in(struct snd_info_entry *entry, struct snd_info_buffer *buffer)
 {
 	struct marian_card *marian = entry->private_data;
@@ -852,7 +821,6 @@ static void snd_marian_proc_ports_in(struct snd_info_entry *entry, struct snd_in
 	else
 		marian_proc_ports_generic(marian, buffer, MARIAN_PORTS_TYPE_INPUT);
 }
-
 
 static void snd_marian_proc_ports_out(struct snd_info_entry *entry, struct snd_info_buffer *buffer)
 {

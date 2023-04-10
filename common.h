@@ -15,10 +15,8 @@
 #include <sound/initval.h>
 #include <sound/info.h>
 
-
 struct marian_card;
 struct marian_card_descriptor;
-
 
 typedef void (*marian_hw_constraints_func)(struct marian_card *marian,
 		struct snd_pcm_substream *substream, struct snd_pcm_hw_params *params);
@@ -37,7 +35,6 @@ typedef void (*marian_proc_ports_func)(struct marian_card *marian, struct snd_in
 				adr, __FILE__, __LINE__); \
 				writel(val, adr); \
 			}
-
 
 struct marian_card_descriptor {
 	char *name;
@@ -71,7 +68,6 @@ struct marian_card_descriptor {
 	struct snd_pcm_hardware info_playback;
 	struct snd_pcm_hardware info_capture;
 };
-
 
 struct marian_card {
 	struct marian_card_descriptor *desc;
@@ -117,7 +113,6 @@ struct marian_card {
 	void *card_specific;
 };
 
-
 #define SERAPH_RD_IRQ_STATUS      0x00
 #define SERAPH_RD_HWPOINTER       0x8C
 
@@ -148,18 +143,18 @@ struct marian_card {
 #define MARIAN_PORTS_TYPE_INPUT 0
 #define MARIAN_PORTS_TYPE_OUTPUT 1
 
-#define ERR_DEAD_WRITE 1
-#define ERR_DEAD_READ (1 << 1)
-#define ERR_DATA_LOST (1 << 2)
-#define ERR_PAGE_CONF (1 << 3)
-#define ERR_INT_PLAY (1 << 10)
-#define ERR_INT_REC (1 << 13)
+#define ERR_DEAD_WRITE BIT(0)
+#define ERR_DEAD_READ BIT(1)
+#define ERR_DATA_LOST BIT(2)
+#define ERR_PAGE_CONF BIT(3)
+#define ERR_INT_PLAY BIT(10)
+#define ERR_INT_REC BIT(13)
 
-#define STATUS_ST_READY (1 << 4)
-#define STATUS_INT_PLAY (1 << 8)
-#define STATUS_INT_PPLAY (1 << 9)
-#define STATUS_INT_REC (1 << 11)
-#define STATUS_INT_PREC (1 << 12)
-#define STATUS_INT_PREP (1 << 14)
+#define STATUS_ST_READY BIT(4)
+#define STATUS_INT_PLAY BIT(8)
+#define STATUS_INT_PPLAY BIT(9)
+#define STATUS_INT_REC BIT(11)
+#define STATUS_INT_PREC BIT(12)
+#define STATUS_INT_PREP BIT(14)
 
 #endif

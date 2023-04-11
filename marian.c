@@ -258,9 +258,9 @@ static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci
 	if (dev >= SNDRV_CARDS)
 		return -ENODEV;
 
-	dev_dbg(&pci->dev, "(.., [%04x:%04x, %lu])\n",
+	dev_dbg(&pci->dev, "[%04x:%04x, %lu]\n",
 		pci_id->vendor, pci_id->device, pci_id->driver_data);
-	dev_dbg(&pci->dev, "Found a %s, creating instance..\n",
+	dev_dbg(&pci->dev, "Found a %s, creating instance\n",
 		descriptors[pci_id->driver_data].name);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 16, 0)
@@ -422,7 +422,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 
 	marian->port = pci_resource_start(pci, 0);
 	len = pci_resource_len(pci, 0);
-	dev_dbg(&pci->dev, "grabbing memory region 0x%lx-0x%lx (%d bytes)..\n",
+	dev_dbg(&pci->dev, "grabbing memory region 0x%lx-0x%lx (%d bytes)\n",
 		marian->port, marian->port + len - 1, len);
 	marian->iobase = pci_iomap(pci, 0, 0);
 	if (!marian->iobase) {

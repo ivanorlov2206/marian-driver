@@ -350,7 +350,7 @@ static int marian_generic_speedmode_info(struct snd_kcontrol *kcontrol,
 					 struct snd_ctl_elem_info *uinfo)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-	static char *texts[] = { "1FS", "2FS", "4FS" };
+	static const char * const texts[] = { "1FS", "2FS", "4FS" };
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;

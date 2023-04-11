@@ -78,7 +78,7 @@ static int marian_m2_spi_write(struct marian_card *marian, u8 adr, u8 val)
 
 static int marian_m2_sync_state_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
 {
-	static char *texts[] = { "No Signal", "Lock", "Sync" };
+	static const char * const texts[] = { "No Signal", "Lock", "Sync" };
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
@@ -121,7 +121,7 @@ static int marian_m2_sync_state_create(struct marian_card *marian, char *label, 
 static int marian_m2_channel_mode_info(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_info *uinfo)
 {
-	static char *texts[] = { "56ch", "64ch" };
+	static const char * const texts[] = { "56ch", "64ch" };
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
@@ -161,7 +161,7 @@ static int marian_m2_input_channel_mode_create(struct marian_card *marian,
 
 static int marian_m2_frame_mode_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
 {
-	static char *texts[] = { "48kHz", "96kHz" };
+	static const char * const texts[] = { "48kHz", "96kHz" };
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
@@ -292,7 +292,8 @@ static int marian_m2_output_frame_mode_create(struct marian_card *marian, char *
 static int marian_m2_clock_source_info(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_info *uinfo)
 {
-	static char *texts[] = { "Internal", "Sync Bus", "Input Port 1", "Input Port 2" };
+	static const char * const texts[] = {"Internal", "Sync Bus",
+					      "Input Port 1", "Input Port 2"};
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;

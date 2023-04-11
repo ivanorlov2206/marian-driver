@@ -7,7 +7,7 @@
 static int marian_seraph8_clock_source_info(struct snd_kcontrol *kcontrol,
 					    struct snd_ctl_elem_info *uinfo)
 {
-	static char *texts[] = { "Internal", "Sync Bus" };
+	static const char * const texts[] = { "Internal", "Sync Bus" };
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;

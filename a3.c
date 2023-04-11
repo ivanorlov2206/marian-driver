@@ -7,7 +7,7 @@
 static int marian_a3_clock_source_info(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_info *uinfo)
 {
-	static char *texts[] = { "Internal", "Sync Bus", "ADAT Input 1",
+	static const char * const texts[] = { "Internal", "Sync Bus", "ADAT Input 1",
 				"ADAT Input 2", "ADAT Input 3" };
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;

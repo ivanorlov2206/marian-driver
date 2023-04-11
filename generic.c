@@ -447,28 +447,26 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 		writel(buf, marian->iobase + 0x6C); // write data left aligned
 
 	}
-	if (bits_read > 0) {
-		if (bits_read <= 32) {
-			tries = 10;
-			SPI_WAIT_FOR_AR(tries);
-			if (tries == 0) {
-				dev_dbg(marian->card->dev,
-					"marian_spi_transfer: bus didn't signal AR\n");
-				return -1;
-			}
-
-			buf = readl(marian->iobase + 0x74);
-
-			buf <<= 32 - bits_read;
-			i = 0;
-
-			while (bits_read > 0) {
-				data_read[i++] = (buf >> 24) & 0xFF;
-				buf <<= 8;
-				bits_read -= 8;
-			}
-
+	if (bits_read > 0 && bits_read <= 32) {
+		tries = 10;
+		SPI_WAIT_FOR_AR(tries);
+		if (tries == 0) {
+			dev_dbg(marian->card->dev,
+				"marian_spi_transfer: bus didn't signal AR\n");
+			return -1;
 		}
+
+		buf = readl(marian->iobase + 0x74);
+
+		buf <<= 32 - bits_read;
+		i = 0;
+
+		while (bits_read > 0) {
+			data_read[i++] = (buf >> 24) & 0xFF;
+			buf <<= 8;
+			bits_read -= 8;
+		}
+
 	}
 
 	return 0;

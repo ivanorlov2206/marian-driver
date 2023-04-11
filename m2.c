@@ -335,17 +335,17 @@ static int marian_m2_clock_source_get(struct snd_kcontrol *kcontrol,
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	switch (marian->clock_source) {
-	case 1:
-		ucontrol->value.enumerated.item[0] = 0;
+	case M2_CLOCK_SRC_DCO:
+		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INTERNAL;
 		break;
-	case 2:
-		ucontrol->value.enumerated.item[0] = 1;
+	case M2_CLOCK_SRC_SYNCBUS:
+		ucontrol->value.enumerated.item[0] = CLOCK_SRC_SYNCBUS;
 		break;
-	case 4:
-		ucontrol->value.enumerated.item[0] = 2;
+	case M2_CLOCK_SRC_MADI1:
+		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INP1;
 		break;
-	case 5:
-		ucontrol->value.enumerated.item[0] = 3;
+	case M2_CLOCK_SRC_MADI2:
+		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INP2;
 		break;
 	default:
 		dev_dbg(marian->card->dev,
@@ -363,17 +363,17 @@ static int marian_m2_clock_source_put(struct snd_kcontrol *kcontrol,
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	switch (ucontrol->value.enumerated.item[0]) {
-	case 0: // DCO
-		marian_generic_set_clock_source(marian, 1);
+	case CLOCK_SRC_INTERNAL: // DCO
+		marian_generic_set_clock_source(marian, M2_CLOCK_SRC_DCO);
 		break;
-	case 1: // Sync bus
-		marian_generic_set_clock_source(marian, 2);
+	case CLOCK_SRC_SYNCBUS: // Sync bus
+		marian_generic_set_clock_source(marian, M2_CLOCK_SRC_SYNCBUS);
 		break;
-	case 2: // MADI port 1
-		marian_generic_set_clock_source(marian, 4);
+	case CLOCK_SRC_INP1: // MADI port 1
+		marian_generic_set_clock_source(marian, M2_CLOCK_SRC_MADI1);
 		break;
-	case 3: // MADI port 2
-		marian_generic_set_clock_source(marian, 5);
+	case CLOCK_SRC_INP2: // MADI port 2
+		marian_generic_set_clock_source(marian, M2_CLOCK_SRC_MADI2);
 		break;
 	}
 

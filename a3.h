@@ -11,10 +11,10 @@ void marian_a3_create_controls(struct marian_card *marian);
 
 #define PORTS_COUNT 23
 
-#define CLOCK_SRC_DCO 0
-#define CLOCK_SRC_SYNCBUS 1
-#define CLOCK_SRC_ADAT1 2
-#define CLOCK_SRC_ADAT2 3
-#define CLOCK_SRC_ADAT3 4
+#define A3_CLOCK_SRC_DCO 1
+#define A3_CLOCK_SRC_SYNCBUS 2
+#define A3_CLOCK_SRC_ADAT1 4
+#define A3_CLOCK_SRC_ADAT2 5
+#define A3_CLOCK_SRC_ADAT3 6
 
 #endif

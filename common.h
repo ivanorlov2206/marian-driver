@@ -158,4 +158,12 @@ struct marian_card {
 #define STATUS_INT_PREC BIT(12)
 #define STATUS_INT_PREP BIT(14)
 
+enum CLOCK_SOURCE {
+	CLOCK_SRC_INTERNAL = 0,
+	CLOCK_SRC_SYNCBUS  = 1,
+	CLOCK_SRC_INP1     = 2,
+	CLOCK_SRC_INP2	   = 3,
+	CLOCK_SRC_INP3	   = 4,
+};
+
 #endif

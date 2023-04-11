@@ -24,11 +24,11 @@ static int marian_seraph8_clock_source_get(struct snd_kcontrol *kcontrol,
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	switch (marian->clock_source) {
-	case 1:
-		ucontrol->value.enumerated.item[0] = 0;
+	case S8_CLOCK_SRC_DCO:
+		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INTERNAL;
 		break;
-	case 2:
-		ucontrol->value.enumerated.item[0] = 1;
+	case S8_CLOCK_SRC_SYNCBUS:
+		ucontrol->value.enumerated.item[0] = CLOCK_SRC_SYNCBUS;
 		break;
 	default:
 		dev_dbg(marian->card->dev,
@@ -46,11 +46,11 @@ static int marian_seraph8_clock_source_put(struct snd_kcontrol *kcontrol,
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	switch (ucontrol->value.enumerated.item[0]) {
-	case 0: // DCO
-		marian_generic_set_clock_source(marian, 1);
+	case CLOCK_SRC_INTERNAL: // DCO
+		marian_generic_set_clock_source(marian, S8_CLOCK_SRC_DCO);
 		break;
-	case 1: // Sync bus
-		marian_generic_set_clock_source(marian, 2);
+	case CLOCK_SRC_SYNCBUS: // Sync bus
+		marian_generic_set_clock_source(marian, S8_CLOCK_SRC_SYNCBUS);
 		break;
 	}
 

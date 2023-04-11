@@ -24,20 +24,20 @@ static int marian_a3_clock_source_get(struct snd_kcontrol *kcontrol,
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	switch (marian->clock_source) {
-	case 1:
-		ucontrol->value.enumerated.item[0] = 0;
+	case A3_CLOCK_SRC_DCO:
+		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INTERNAL;
 		break;
-	case 2:
-		ucontrol->value.enumerated.item[0] = 1;
+	case A3_CLOCK_SRC_SYNCBUS:
+		ucontrol->value.enumerated.item[0] = CLOCK_SRC_SYNCBUS;
 		break;
-	case 4:
-		ucontrol->value.enumerated.item[0] = 2;
+	case A3_CLOCK_SRC_ADAT1:
+		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INP1;
 		break;
-	case 5:
-		ucontrol->value.enumerated.item[0] = 3;
+	case A3_CLOCK_SRC_ADAT2:
+		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INP2;
 		break;
-	case 6:
-		ucontrol->value.enumerated.item[0] = 4;
+	case A3_CLOCK_SRC_ADAT3:
+		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INP3;
 		break;
 	default:
 		dev_dbg(marian->card->dev,
@@ -55,20 +55,20 @@ static int marian_a3_clock_source_put(struct snd_kcontrol *kcontrol,
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	switch (ucontrol->value.enumerated.item[0]) {
-	case CLOCK_SRC_DCO: // DCO
-		marian_generic_set_clock_source(marian, 1);
+	case CLOCK_SRC_INTERNAL: // DCO
+		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_DCO);
 		break;
 	case CLOCK_SRC_SYNCBUS: // Sync bus
-		marian_generic_set_clock_source(marian, 2);
+		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_SYNCBUS);
 		break;
-	case CLOCK_SRC_ADAT1: // ADAT input 1
-		marian_generic_set_clock_source(marian, 4);
+	case CLOCK_SRC_INP1: // ADAT input 1
+		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_ADAT1);
 		break;
-	case CLOCK_SRC_ADAT2: // ADAT input 2
-		marian_generic_set_clock_source(marian, 5);
+	case CLOCK_SRC_INP2: // ADAT input 2
+		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_ADAT2);
 		break;
-	case CLOCK_SRC_ADAT3: // ADAT input 3
-		marian_generic_set_clock_source(marian, 6);
+	case CLOCK_SRC_INP3: // ADAT input 3
+		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_ADAT3);
 		break;
 	}
 

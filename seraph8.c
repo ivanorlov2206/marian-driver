@@ -2,13 +2,7 @@
 #include "seraph8.h"
 #include "generic.h"
 
-//
-// ALSA controls
-//
-
-//
-// RW
-//
+// ALSA controls, RW
 
 static int marian_seraph8_clock_source_info(struct snd_kcontrol *kcontrol,
 					    struct snd_ctl_elem_info *uinfo)
@@ -86,9 +80,11 @@ void marian_seraph8_create_controls(struct marian_card *marian)
 
 void marian_seraph8_prepare(struct marian_card *marian)
 {
-	// MARIAN-AH:
-	// uint32_t mask = 0xFF000000;
-	// Transfer enable Bits for all Analog Channels
+	/*
+	 * MARIAN-AH:
+	 * uint32_t mask = 0xFF000000;
+	 * Transfer enable Bits for all Analog Channels
+	 */
 	uint32_t mask = 0x000000FF;
 
 	// arm channels
@@ -131,7 +127,6 @@ void marian_seraph8_init_codec(struct marian_card *marian)
 
 void marian_seraph8_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)
 {
-	//struct m2_specific *spec = (struct m2_specific*) marian->card_specific;
 	uint8_t v1, v2;
 	uint32_t *buf;
 	unsigned int i;

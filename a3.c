@@ -2,13 +2,7 @@
 #include "a3.h"
 #include "generic.h"
 
-//
-// ALSA controls
-//
-
-//
-// RW
-//
+// ALSA controls, RW
 
 static int marian_a3_clock_source_info(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_info *uinfo)
@@ -111,14 +105,10 @@ static int marian_a3_clock_source_create(struct marian_card *marian, char *label
  *   - Speed mode (1, 2, 4FS)
  *   - DCO frequency (1 Hertz)
  *   - DCO frequency (1/1000th)
- *
  */
 
 void marian_a3_create_controls(struct marian_card *marian)
 {
-	//marian_a3_sync_state_create(marian, "Input 1 Sync", 0);
-	//marian_a3_sync_state_create(marian, "Input 2 Sync", 1);
-	//marian_a3_sync_state_create(marian, "Input 3 Sync", 2);
 	marian_generic_frequency_create(marian, "Input 1 Frequency", 4);
 	marian_generic_frequency_create(marian, "Input 2 Frequency", 5);
 	marian_generic_frequency_create(marian, "Input 3 Frequency", 6);

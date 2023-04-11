@@ -16,7 +16,6 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
- *
  */
 
 #include <linux/version.h>
@@ -221,11 +220,7 @@ static struct marian_card_descriptor descriptors[7] = {
 	}
 };
 
-/*
- *
- * kernel interface
- *
- */
+// kernel interface
 
 MODULE_AUTHOR("Florin Faber <faberman@linuxproaudio.org>");
 MODULE_DESCRIPTION("MARIAN Seraph series");
@@ -251,8 +246,8 @@ static const struct pci_device_id snd_marian_ids[] = {
 
 MODULE_DEVICE_TABLE(pci, snd_marian_ids);
 
-static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;	/* Index 0-MAX */
-static char *id[SNDRV_CARDS] = SNDRV_DEFAULT_STR;	/* ID for this card */
+static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX; // Index 0-MAX
+static char *id[SNDRV_CARDS] = SNDRV_DEFAULT_STR; // ID for this card
 
 static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci_id)
 {
@@ -318,11 +313,7 @@ static void __exit alsa_card_marian_exit(void)
 module_init(alsa_card_marian_init);
 module_exit(alsa_card_marian_exit);
 
-/*
- *
- * card interface
- *
- */
+// card interface
 
 static void print_irq_status(unsigned int v)
 {
@@ -373,11 +364,7 @@ static irqreturn_t snd_marian_interrupt(int irq, void *dev_id)
 	return IRQ_NONE;
 }
 
-/*
- *
- * ALSA interface
- *
- */
+// ALSA interface
 
 static const struct snd_pcm_ops snd_marian_playback_ops = {
 	.open = snd_marian_playback_open,
@@ -411,7 +398,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	int err;
 	unsigned int len;
 
-	/** initialize marian struct */
+	// initialize marian struct
 	marian->desc = desc;
 	marian->card = card;
 	marian->pcm = NULL;
@@ -422,7 +409,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	marian->idx = idx;
 	spin_lock_init(&marian->lock);
 
-	/** configure PCI device */
+	// configure PCI device
 	err = pci_enable_device(pci);
 	if (err < 0)
 		return err;
@@ -451,7 +438,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	}
 	marian->irq = pci->irq;
 
-	/** set up ALSA driver part */
+	// set up ALSA driver part
 	card->private_free = snd_marian_card_free;
 
 	strcpy(card->driver, "MARIAN FPGA");
@@ -461,7 +448,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 
 	snd_card_set_dev(card, &pci->dev);
 
-	/** set up ALSA PCM */
+	// set up ALSA PCM
 	err = snd_pcm_new(card, desc->name, 0, 1, 1, &marian->pcm);
 	if (err < 0)
 		return err;
@@ -469,7 +456,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	snd_pcm_set_ops(marian->pcm, SNDRV_PCM_STREAM_PLAYBACK, &snd_marian_playback_ops);
 	snd_pcm_set_ops(marian->pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_marian_capture_ops);
 
-	/** set up DMA buffers */
+	// set up DMA buffers
 	len = PAGE_ALIGN(desc->dma_bufsize);
 	dev_dbg(card->dev, "Allocating %d bytes DMA buffer\n", len);
 	err = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, &pci->dev,
@@ -491,7 +478,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	dev_dbg(card->dev, "dmabuf.addr = 0x%lx\n", (unsigned long)marian->dmabuf.addr);
 	dev_dbg(card->dev, "dmabuf.bytes = %d\n", (int)marian->dmabuf.bytes);
 
-	/* set up /proc entries */
+	// set up /proc entries
 	if (!snd_card_proc_new(card, "status", &entry))
 		snd_info_set_text_ops(entry, marian, snd_marian_proc_status);
 	if (!snd_card_proc_new(card, "ports.in", &entry))
@@ -499,17 +486,17 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	if (!snd_card_proc_new(card, "ports.out", &entry))
 		snd_info_set_text_ops(entry, marian, snd_marian_proc_ports_out);
 
-	/* if there is card specific initialization, code call it */
+	// if there is card specific initialization, code call it
 	if (marian->desc->init_card)
 		marian->desc->init_card(marian);
 	else
 		marian_generic_init(marian);
 
-	/* set up controls */
+	// set up controls
 	if (marian->desc->create_controls)
 		marian->desc->create_controls(marian);
 
-	/* finally: register card */
+	// finally: register card
 	return snd_card_register(card);
 }
 
@@ -650,7 +637,7 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 		"  setting card's DMA block count to %d\n", marian->period_size / 16);
 	WRITEL(marian->period_size / 16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
 
-	/* apply optional card specific hw constraints */
+	// apply optional card specific hw constraints
 	if (marian->desc->hw_constraints_func)
 		marian->desc->hw_constraints_func(marian, substream, params);
 
@@ -690,7 +677,7 @@ static int snd_marian_prepare(struct snd_pcm_substream *substream)
 	if (marian->desc->prepare)
 		marian->desc->prepare(marian);
 
-	/* if there is card specific codec initialization, call it */
+	// if there is card specific codec initialization, call it
 	if (marian->desc->init_codec)
 		marian->desc->init_codec(marian);
 
@@ -721,7 +708,7 @@ static int snd_marian_trigger(struct snd_pcm_substream *substream, int cmd)
 		WRITEL(0x0, marian->iobase + SERAPH_WR_DMA_ENABLE);
 		marian_silence(marian);
 
-		/* unarm channels to inhibit playback from the FPGA's internal buffer */
+		// unarm channels to inhibit playback from the FPGA's internal buffer
 		WRITEL(0, marian->iobase + 0x08);
 		WRITEL(0, marian->iobase + 0x0C);
 		WRITEL(0, marian->iobase + 0x20);
@@ -770,13 +757,13 @@ static int snd_marian_mmap(struct snd_pcm_substream *substream, struct vm_area_s
 	return 0;
 }
 
-/**
+/*
  * Capture and playback data lie one after another in the buffer.
  * The start position of the playback area and the length of each
  * channel's buffer depend directly on the period size.
  * We give ALSA the same dmabuf for playback and capture and set
  * each channel's buffer position using snd_pcm_channel_info->first.
- **/
+ */
 static int marian_channel_info(struct snd_pcm_substream *substream,
 			       struct snd_pcm_channel_info *info)
 {

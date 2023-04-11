@@ -1,16 +1,16 @@
 #include "common.h"
 #include "generic.h"
 
-//
-// generic ALSA control functions
+// Generic ALSA control functions
 
-/**
+/*
  * Measure the frequency of a clock source.
  * The measurement is triggered and the FPGA's ready
  * signal polled (normally takes up to 2ms). The measurement
  * has only a certainty of 10-20Hz, this function rounds it up
  * to the nearest 10Hz step (in 1FS).
- **/
+ */
+
 unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source)
 {
 	uint32_t val;
@@ -26,8 +26,6 @@ unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source
 		msleep(1);
 		tries--;
 	}
-
-	//snd_printk(KERN_INFO "measure_freq(%d) got 0x%08x (%d Hz) after %d tries\n", source, val, 1280000000/((val & 0x3FFFF)+1), 5-tries);
 
 	if (tries > 0)
 		return (((1280000000 / ((val & 0x3FFFF) + 1)) + 5 * marian->speedmode)
@@ -81,18 +79,18 @@ void marian_generic_set_dco(struct marian_card *marian, unsigned int freq, unsig
 	val <<= 36;
 
 	if (marian->detune != 0) {
-		// DCO detune active
-		// this calculation takes a bit of a shortcut
-		// - should be implemented using a logarithmic scale
+		/*
+		 * DCO detune active
+		 * this calculation takes a bit of a shortcut
+		 * - should be implemented using a logarithmic scale
+		 */
 		detune = marian->detune * 100;
 		v2 = val;
 		div_u64(v2, 138564);
 		detune *= v2;
-		//detune *= val/138564;
 		val += detune;
 	}
 
-	//val /= 80000000000;
 	val = div_u64(val, 80000000);
 	val = div_u64(val, 1000);
 
@@ -278,32 +276,10 @@ int marian_generic_init(struct marian_card *marian)
 	marian_generic_set_clock_source(marian, 1);
 
 	// init SPI clock divider
-	WRITEL(0x1F, marian->iobase + 0x74);       /* set up clock divider */
+	WRITEL(0x1F, marian->iobase + 0x74);
 
 	return 0;
 }
-
-/*
-static void marian_prepare_generic(struct marian_card *marian)
-{
-	unsigned int val;
-
-	snd_printk(KERN_INFO "marian_prepare_generic()\n");
-
-	// init DMA engine
-	snd_printk(KERN_INFO "  setting DMA ADR to %08x\n", (unsigned int) marian->capture_substream->runtime->dma_addr);
-	WRITEL(marian->capture_substream->runtime->dma_addr, marian->iobase + SERAPH_WR_DMA_ADR);
-	snd_printk(KERN_INFO "  setting DMA block count to %d\n", 64);
-	WRITEL(64, marian->iobase + SERAPH_WR_DMA_BLOCKS);
-
-	val = set_lo_bits(8);
-	snd_printk(KERN_INFO "  enabling %d DMA capture channels\n", 8);
-	WRITEL(val, marian->iobase + SERAPH_WR_ENABLE_CAPTURE);
-	snd_printk(KERN_INFO "  enabling %d DMA playback channels\n", 8);
-	WRITEL(val, marian->iobase + SERAPH_WR_ENABLE_PLAYBACK);
-
-}
-*/
 
 void marian_proc_status_generic(struct marian_card *marian, struct snd_info_buffer *buffer)
 {
@@ -331,20 +307,18 @@ void marian_proc_status_generic(struct marian_card *marian, struct snd_info_buff
 	snd_iprintf(buffer, "DCO detune   : %d Cent\n", marian->detune);
 }
 
-/**
+/*
  * Default port name function, outputs the static string
  * port_names of the card descriptor regardless of current
- * speed mode and wether input or output ports are requested.
- **/
+ * speed mode and whether input or output ports are requested.
+ */
 void marian_proc_ports_generic(struct marian_card *marian, struct snd_info_buffer *buffer,
 			       unsigned int type)
 {
 	snd_iprintf(buffer, marian->desc->port_names);
 }
 
-//
 // ALSA controls
-//
 
 void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speedmode)
 {
@@ -354,18 +328,17 @@ void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speed
 	switch (speedmode) {
 	case SPEEDMODE_SLOW:
 		WRITEL(0x03, marian->iobase + 0x80);
-		WRITEL(0x00, marian->iobase + 0x8C);        /* for 48kHz in 1FS mode */
-		//WRITEL(0x02, marian->iobase + 0x8C);        /* for 48kHz in 1FS mode */
+		WRITEL(0x00, marian->iobase + 0x8C); // for 48kHz in 1FS mode
 		marian->speedmode = SPEEDMODE_SLOW;
 		break;
 	case SPEEDMODE_NORMAL:
 		WRITEL(0x03, marian->iobase + 0x80)
-		WRITEL(0x01, marian->iobase + 0x8C);        /* for 96kHz in 2FS mode */
+		WRITEL(0x01, marian->iobase + 0x8C); // for 96kHz in 2FS mode
 		marian->speedmode = SPEEDMODE_NORMAL;
 		break;
 	case SPEEDMODE_FAST:
 		WRITEL(0x03, marian->iobase + 0x80);
-		WRITEL(0x00, marian->iobase + 0x8C);        /* for 192kHz in 4FS mode */
+		WRITEL(0x00, marian->iobase + 0x8C); // for 192kHz in 4FS mode
 		marian->speedmode = SPEEDMODE_FAST;
 		break;
 	}
@@ -461,11 +434,9 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 		writel(0x1234, marian->iobase + 0x70);
 	}
 
-	//snd_printk(KERN_INFO "marian_spi_transfer: Bus ready after %d tries.\n", 11-tries);
-
-	writel(cs, marian->iobase + 0x60);         /* chip select register */
-	writel(bits_write, marian->iobase + 0x64); /* number of bits to write */
-	writel(bits_read, marian->iobase + 0x68);  /* number of bits to read */
+	writel(cs, marian->iobase + 0x60);         // chip select register
+	writel(bits_write, marian->iobase + 0x64); // number of bits to write
+	writel(bits_read, marian->iobase + 0x68);  // number of bits to read
 
 	if (bits_write <= 32) {
 		if (bits_write <= 8)
@@ -473,9 +444,7 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 		else if (bits_write <= 16)
 			buf = data_write[0] << 24 | data_write[1] << (32 - bits_write);
 
-		//snd_printk(KERN_INFO "marian_spi_transfer: Writing %d bits, 0x%08x\n", bits_write, buf);
-
-		writel(buf, marian->iobase + 0x6C); /* write data left aligned */
+		writel(buf, marian->iobase + 0x6C); // write data left aligned
 
 	}
 	if (bits_read > 0) {
@@ -488,12 +457,7 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 				return -1;
 			}
 
-			//snd_printk(KERN_INFO "marian_spi_transfer: Bus ready for reading after %d tries.\n", 11-tries);
-
-			//snd_printk(KERN_INFO "marian_spi_transfer: %u bits read\n", readl(marian->iobase + 0x68));
-
 			buf = readl(marian->iobase + 0x74);
-			//snd_printk(KERN_INFO "marian_spi_transfer: Read 0x%08x\n", buf);
 
 			buf <<= 32 - bits_read;
 			i = 0;

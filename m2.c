@@ -4,28 +4,28 @@
 
 //#define DEBUG 1
 
-/* MADI FPGA register 0x40 */
-/* Use internal (=0) or external PLL (=1)    */
+// MADI FPGA register 0x40
+// Use internal (=0) or external PLL (=1)
 #define M2_PLL         2
 
-/* MADI FPGA register 0x41 */
-/* Enable both MADI transmitters (=1)        */
+// MADI FPGA register 0x41
+// Enable both MADI transmitters (=1)
 #define M2_TX_ENABLE   0
-/* Use int (=0) or 32bit IEEE float (=1)     */
+// Use int (=0) or 32bit IEEE float (=1)
 #define M2_INT_FLOAT   4
-/* Big endian (=0), little endian (=1)       */
+// Big endian (=0), little endian (=1)
 #define M2_ENDIANNESS  5
-/* MSB first (=0), LSB first (=1)            */
+// MSB first (=0), LSB first (=1)
 #define M2_BIT_ORDER   6
 
-/* MADI FPGA register 0x42 */
-/* Send 56ch (=0) or 64ch (=1) MADI frames   */
+// MADI FPGA register 0x42
+// Send 56ch (=0) or 64ch (=1) MADI frames
 #define M2_PORT1_MODE  0
-/* Send 48kHz (=0) or 96kHz (=1) MADI frames */
+// Send 48kHz (=0) or 96kHz (=1) MADI frames
 #define M2_PORT1_FRAME 1
-/* Send 56ch (=0) or 64ch (=1) MADI frames   */
+// Send 56ch (=0) or 64ch (=1) MADI frames
 #define M2_PORT2_MODE  2
-/* Send 48kHz (=0) or 96kHz (=1) MADI frames */
+// Send 48kHz (=0) or 96kHz (=1) MADI frames
 #define M2_PORT2_FRAME 3
 
 struct m2_specific {
@@ -100,15 +100,7 @@ static int marian_m2_spi_write(struct marian_card *marian, uint8_t adr, uint8_t 
 	return marian_spi_transfer(marian, 0x02, 16, (uint8_t *)&buf_out, 0, NULL);
 }
 
-//
-//
-// M2 ALSA controls
-//
-//
-
-//
 // RO controls
-//
 
 static int marian_m2_sync_state_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
 {
@@ -232,9 +224,7 @@ static int marian_m2_input_frame_mode_create(struct marian_card *marian, char *l
 	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
 }
 
-//
 // RW controls
-//
 
 static int marian_m2_output_channel_mode_get(struct snd_kcontrol *kcontrol,
 					     struct snd_ctl_elem_value *ucontrol)
@@ -426,7 +416,6 @@ static int marian_m2_clock_source_create(struct marian_card *marian, char *label
  *   - Speed mode (1, 2, 4FS)
  *   - DCO frequency (1 Hertz)
  *   - DCO frequency (1/1000th)
- *
  */
 void marian_m2_create_controls(struct marian_card *marian)
 {
@@ -447,10 +436,10 @@ void marian_m2_create_controls(struct marian_card *marian)
 	marian_generic_dco_create(marian);
 }
 
-/**
+/*
  * Enable (state=1) or disable (state=0) the external PLL for the
  * MADI FPGA.
- **/
+ */
 static void marian_m2_set_pll(struct marian_card *marian, uint8_t state)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
@@ -467,9 +456,7 @@ static void marian_m2_enable_tx(struct marian_card *marian, uint8_t state)
 	marian_m2_spi_write(marian, 0x41, spec->shadow_41);
 }
 
-/**
- * @param state 0=int, 1=float
- **/
+// @param state 0=int, 1=float
 static void marian_m2_set_float(struct marian_card *marian, uint8_t state)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
@@ -478,9 +465,7 @@ static void marian_m2_set_float(struct marian_card *marian, uint8_t state)
 	marian_m2_spi_write(marian, 0x41, spec->shadow_41);
 }
 
-/**
- * @param state 0=big endian, 1=little endian
- **/
+// @param state 0=big endian, 1=little endian
 static void marian_m2_set_endianness(struct marian_card *marian, uint8_t state)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
@@ -489,9 +474,7 @@ static void marian_m2_set_endianness(struct marian_card *marian, uint8_t state)
 	marian_m2_spi_write(marian, 0x41, spec->shadow_41);
 }
 
-/**
- * @param state 0=MSB first, 1=LSB first
- **/
+// @param state 0=MSB first, 1=LSB first
 static void marian_m2_set_bit_order(struct marian_card *marian, uint8_t state)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
@@ -531,7 +514,7 @@ static void marian_m2_write_port_frame(struct marian_card *marian)
 	spec->shadow_42 = spec->shadow_42 & ~((1 << M2_PORT1_FRAME) | (1 << M2_PORT2_FRAME));
 
 	if (marian->speedmode == 2) {
-		/* If we are in FS2, set 96kHz mode where enabled */
+		// If we are in FS2, set 96kHz mode where enabled
 		if (spec->frame & 1)
 			spec->shadow_42 |= 1 << M2_PORT1_FRAME;
 		if (spec->frame & 2)

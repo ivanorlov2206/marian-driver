@@ -561,7 +561,6 @@ void marian_m2_free(struct marian_card *marian)
 
 void marian_m2_init_codec(struct marian_card *marian)
 {
-
 }
 
 void marian_m2_prepare(struct marian_card *marian)

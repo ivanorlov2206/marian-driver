@@ -445,7 +445,6 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 			buf = data_write[0] << 24 | data_write[1] << (32 - bits_write);
 
 		writel(buf, marian->iobase + 0x6C); // write data left aligned
-
 	}
 	if (bits_read > 0 && bits_read <= 32) {
 		tries = 10;
@@ -466,7 +465,6 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 			buf <<= 8;
 			bits_read -= 8;
 		}
-
 	}
 
 	return 0;

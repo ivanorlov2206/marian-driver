@@ -646,14 +646,6 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 
 static int snd_marian_hw_free(struct snd_pcm_substream *substream)
 {
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		// mute inputs
-
-	} else {
-		// mute outputs
-
-	}
-
 	return 0;
 }
 

@@ -291,7 +291,7 @@ static int marian_m2_output_frame_mode_put(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
-	dev_dbg(marian->card->dev, "marian_m2_output_frame_mode_put(%d) -> %d\n",
+	dev_dbg(marian->card->dev, "%d -> %d\n",
 		kcontrol->private_value, ucontrol->value.enumerated.item[0]);
 
 	marian_m2_set_port_frame(marian, kcontrol->private_value,
@@ -349,7 +349,7 @@ static int marian_m2_clock_source_get(struct snd_kcontrol *kcontrol,
 		break;
 	default:
 		dev_dbg(marian->card->dev,
-			"marian_m2_clock_source_get: Illegal value for clock_source! (%d)\n",
+			"Illegal value for clock_source! (%d)\n",
 			marian->clock_source);
 		return -1;
 	}
@@ -562,7 +562,7 @@ int marian_m2_init(struct marian_card *marian)
 	spec = kzalloc(sizeof(struct m2_specific), GFP_KERNEL);
 	if (!spec) {
 		dev_dbg(marian->card->dev,
-			"marian_m2: Cannot allocate card specific structure\n");
+			"Cannot allocate card specific structure\n");
 		return -ENOMEM;
 	}
 

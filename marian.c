@@ -258,7 +258,7 @@ static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci
 	if (dev >= SNDRV_CARDS)
 		return -ENODEV;
 
-	dev_dbg(&pci->dev, "snd_marian_probe(.., [%04x:%04x, %lu])\n",
+	dev_dbg(&pci->dev, "(.., [%04x:%04x, %lu])\n",
 		pci_id->vendor, pci_id->device, pci_id->driver_data);
 	dev_dbg(&pci->dev, "Found a %s, creating instance..\n",
 		descriptors[pci_id->driver_data].name);
@@ -573,7 +573,7 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 	int size;
 
 	dev_dbg(marian->card->dev,
-		"snd_marian_hw_params(): %d ch %s @ %dHz, buffer size %d\n",
+		"%d ch %s @ %dHz, buffer size %d\n",
 		params_channels(params),
 		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture",
 		params_rate(params),
@@ -581,11 +581,11 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 
 	marian->period_size = params_buffer_size(params);
 	dev_dbg(marian->card->dev,
-		"snd_marian_hw_params(): period size: %d\n", marian->period_size);
+		"period size: %d\n", marian->period_size);
 
 	size = params_buffer_size(params) * params_channels(params) * 4;
 	dev_dbg(marian->card->dev,
-		"snd_marian_hw_params(): period buf size: %d\n", size);
+		"period buf size: %d\n", size);
 
 	if (params_rate(params) < RATE_SLOW)
 		speedmode = SPEEDMODE_SLOW;
@@ -596,7 +596,7 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 
 	if (speedmode > marian->desc->speedmode_max) {
 		dev_err(marian->card->dev,
-			"snd_marian_hw_params(): Requested rate (%u Hz) higher than card's maximum\n",
+			"Requested rate (%u Hz) higher than card's maximum\n",
 			params_rate(params));
 		_snd_pcm_hw_param_setempty(params, SNDRV_PCM_HW_PARAM_RATE);
 		return -EBUSY;
@@ -739,7 +739,7 @@ static int snd_marian_mmap(struct snd_pcm_substream *substream, struct vm_area_s
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
 
 	dev_dbg(marian->card->dev,
-		"snd_marian_mmap(%d, %016lx)\n", substream->stream, vma->vm_start);
+		"(%d, %016lx)\n", substream->stream, vma->vm_start);
 	dev_dbg(marian->card->dev,
 		"  substream->runtime.dma_addr = %016lx (%016lx >> %u)\n  substream->runtime.dma_area = %016lx\n  substream->runtime.dma_bytes = %u\n",
 		substream->runtime->dma_addr >> PAGE_SHIFT, substream->runtime->dma_addr,

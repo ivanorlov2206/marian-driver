@@ -32,7 +32,7 @@ static int marian_seraph8_clock_source_get(struct snd_kcontrol *kcontrol,
 		break;
 	default:
 		dev_dbg(marian->card->dev,
-			"marian_seraph8_clock_source_get: Illegal value for clock_source! (%d)\n",
+			"Illegal value for clock_source! (%d)\n",
 			marian->clock_source);
 		return -1;
 	}

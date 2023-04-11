@@ -73,7 +73,7 @@ void marian_generic_set_dco(struct marian_card *marian, unsigned int freq, unsig
 	u64 val, v2;
 	s64 detune;
 
-	dev_dbg(marian->card->dev, "marian_generic_set_dco(.., %u, %u)\n", freq, millis);
+	dev_dbg(marian->card->dev, "(.., %u, %u)\n", freq, millis);
 
 	val = (freq * 1000 + millis) * marian->speedmode;
 	val <<= 36;
@@ -425,12 +425,12 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 	unsigned int i;
 
 	dev_dbg(marian->card->dev,
-		"spi_transfer(.., 0x%04x, %u, [%02x, %02x], %u, ..)\n", cs, bits_write,
+		"(.., 0x%04x, %u, [%02x, %02x], %u, ..)\n", cs, bits_write,
 		data_write[0], data_write[1], bits_read);
 
 	SPI_WAIT_FOR_AR(tries);
 	if (tries == 0) {
-		dev_dbg(marian->card->dev, "marian_spi_transfer: Resetting SPI bus\n");
+		dev_dbg(marian->card->dev, "Resetting SPI bus\n");
 		writel(0x1234, marian->iobase + 0x70);
 	}
 
@@ -452,7 +452,7 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 		SPI_WAIT_FOR_AR(tries);
 		if (tries == 0) {
 			dev_dbg(marian->card->dev,
-				"marian_spi_transfer: bus didn't signal AR\n");
+				"Bus didn't signal AR\n");
 			return -1;
 		}
 

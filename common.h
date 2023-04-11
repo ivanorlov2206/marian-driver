@@ -31,11 +31,12 @@ typedef void (*marian_proc_status_func)(struct marian_card *marian, struct snd_i
 typedef void (*marian_proc_ports_func)(struct marian_card *marian, struct snd_info_buffer *buffer,
 					unsigned int type);
 
-#define WRITEL(val, adr) { \
-			snd_printdd(KERN_DEBUG "writel(%02x, %08x) [%s:%u]\n", val, \
-				adr, __FILE__, __LINE__); \
-				writel(val, adr); \
-			}
+#define WRITEL(val, adr)						\
+	{								\
+		snd_printdd(KERN_DEBUG "writel(%02x, %08x) [%s:%u]\n",	\
+			    val, adr, __FILE__, __LINE__);		\
+			    writel(val, adr);				\
+	}
 
 struct marian_card_descriptor {
 	char *name;

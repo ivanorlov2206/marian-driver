@@ -164,19 +164,19 @@ void marian_a3_proc_status(struct marian_card *marian, struct snd_info_buffer *b
 
 	snd_iprintf(buffer, "Clock source: ");
 	switch (marian->clock_source) {
-	case 1:
+	case A3_CLOCK_SRC_DCO:
 		snd_iprintf(buffer, "Internal DCO\n");
 		break;
-	case 2:
+	case A3_CLOCK_SRC_SYNCBUS:
 		snd_iprintf(buffer, "Sync bus\n");
 		break;
-	case 4:
+	case A3_CLOCK_SRC_ADAT1:
 		snd_iprintf(buffer, "ADAT Input 1\n");
 		break;
-	case 5:
+	case A3_CLOCK_SRC_ADAT2:
 		snd_iprintf(buffer, "ADAT Input 2\n");
 		break;
-	case 6:
+	case A3_CLOCK_SRC_ADAT3:
 		snd_iprintf(buffer, "ADAT Input 3\n");
 		break;
 	default:

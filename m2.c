@@ -556,8 +556,7 @@ int marian_m2_init(struct marian_card *marian)
 
 void marian_m2_free(struct marian_card *marian)
 {
-	if (marian->card_specific)
-		kfree(marian->card_specific);
+	kfree(marian->card_specific);
 }
 
 void marian_m2_init_codec(struct marian_card *marian)

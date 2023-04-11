@@ -19,7 +19,8 @@ struct marian_card;
 struct marian_card_descriptor;
 
 typedef void (*marian_hw_constraints_func)(struct marian_card *marian,
-		struct snd_pcm_substream *substream, struct snd_pcm_hw_params *params);
+					   struct snd_pcm_substream *substream,
+					   struct snd_pcm_hw_params *params);
 typedef void (*marian_controls_func)(struct marian_card *marian);
 typedef int (*marian_init_func)(struct marian_card *marian);
 typedef void (*marian_free_func)(struct marian_card *marian);

@@ -7,13 +7,13 @@ void marian_proc_status_generic(struct marian_card *marian, struct snd_info_buff
 void marian_proc_ports_generic(struct marian_card *marian, struct snd_info_buffer *buffer,
 			       unsigned int type);
 unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source);
-int marian_generic_frequency_create(struct marian_card *marian, char *label, uint32_t idx);
+int marian_generic_frequency_create(struct marian_card *marian, char *label, u32 idx);
 int marian_generic_speedmode_create(struct marian_card *marian);
 int marian_generic_dco_create(struct marian_card *marian);
 
 void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speedmode);
-void marian_generic_set_clock_source(struct marian_card *marian, uint8_t source);
-void marian_generic_set_dco(struct marian_card *marian, uint32_t freq, uint32_t millis);
+void marian_generic_set_clock_source(struct marian_card *marian, u8 source);
+void marian_generic_set_dco(struct marian_card *marian, u32 freq, u32 millis);
 
 #define SPI_WAIT_FOR_AR(tries) \
 	{ \
@@ -27,6 +27,6 @@ void marian_generic_set_dco(struct marian_card *marian, uint32_t freq, uint32_t 
 	}
 
 int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_write,
-			uint8_t *data_write, uint16_t bits_read, uint8_t *data_read);
+			u8 *data_write, uint16_t bits_read, u8 *data_read);
 
 #endif

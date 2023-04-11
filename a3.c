@@ -119,7 +119,7 @@ void marian_a3_create_controls(struct marian_card *marian)
 
 void marian_a3_prepare(struct marian_card *marian)
 {
-	uint32_t mask = 0x00FFFFFF;
+	u32 mask = 0x00FFFFFF;
 
 	// arm channels
 	WRITEL(mask, marian->iobase + 0x08);
@@ -155,12 +155,12 @@ void marian_a3_proc_ports(struct marian_card *marian, struct snd_info_buffer *bu
 
 void marian_a3_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)
 {
-	uint32_t *buf;
+	u32 *buf;
 	unsigned int i;
 
 	marian_proc_status_generic(marian, buffer);
 
-	buf = (uint32_t *)marian->dmabuf.area;
+	buf = (u32 *)marian->dmabuf.area;
 
 	snd_iprintf(buffer, "Clock source: ");
 	switch (marian->clock_source) {

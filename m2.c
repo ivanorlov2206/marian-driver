@@ -29,58 +29,58 @@
 #define M2_PORT2_FRAME 3
 
 struct m2_specific {
-	uint8_t shadow_40;
-	uint8_t shadow_41;
-	uint8_t shadow_42;
-	uint8_t frame;
+	u8 shadow_40;
+	u8 shadow_41;
+	u8 shadow_42;
+	u8 frame;
 };
 
-static uint8_t marian_m2_spi_read(struct marian_card *marian, uint8_t adr);
-static int marian_m2_spi_write(struct marian_card *marian, uint8_t adr, uint8_t val);
+static u8 marian_m2_spi_read(struct marian_card *marian, u8 adr);
+static int marian_m2_spi_write(struct marian_card *marian, u8 adr, u8 val);
 static int marian_m2_sync_state_info(struct snd_kcontrol *kcontrol,
 				     struct snd_ctl_elem_info *uinfo);
 static int marian_m2_sync_state_get(struct snd_kcontrol *kcontrol,
 				    struct snd_ctl_elem_value *ucontrol);
-static int marian_m2_sync_state_create(struct marian_card *marian, char *label, uint32_t idx);
+static int marian_m2_sync_state_create(struct marian_card *marian, char *label, u32 idx);
 static int marian_m2_channel_mode_info(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_info *uinfo);
 static int marian_m2_input_channel_mode_get(struct snd_kcontrol *kcontrol,
 					    struct snd_ctl_elem_value *ucontrol);
 static int marian_m2_input_channel_mode_create(struct marian_card *marian,
-					       char *label, uint32_t idx);
+					       char *label, u32 idx);
 static int marian_m2_frame_mode_info(struct snd_kcontrol *kcontrol,
 				     struct snd_ctl_elem_info *uinfo);
 static int marian_m2_input_frame_mode_get(struct snd_kcontrol *kcontrol,
 					  struct snd_ctl_elem_value *ucontrol);
-static int marian_m2_input_frame_mode_create(struct marian_card *marian, char *label, uint32_t idx);
+static int marian_m2_input_frame_mode_create(struct marian_card *marian, char *label, u32 idx);
 static int marian_m2_output_channel_mode_get(struct snd_kcontrol *kcontrol,
 					     struct snd_ctl_elem_value *ucontrol);
 static int marian_m2_output_channel_mode_put(struct snd_kcontrol *kcontrol,
 					     struct snd_ctl_elem_value *ucontrol);
 
 static int marian_m2_output_channel_mode_create(struct marian_card *marian,
-						char *label, uint32_t idx);
+						char *label, u32 idx);
 static int marian_m2_output_frame_mode_get(struct snd_kcontrol *kcontrol,
 					   struct snd_ctl_elem_value *ucontrol);
 static int marian_m2_output_frame_mode_put(struct snd_kcontrol *kcontrol,
 					   struct snd_ctl_elem_value *ucontrol);
 static int marian_m2_output_frame_mode_create(struct marian_card *marian,
-					      char *label, uint32_t idx);
+					      char *label, u32 idx);
 
-static void marian_m2_set_pll(struct marian_card *marian, uint8_t state);
-static void marian_m2_enable_tx(struct marian_card *marian, uint8_t state);
-static void marian_m2_set_float(struct marian_card *marian, uint8_t state);
-static void marian_m2_set_endianness(struct marian_card *marian, uint8_t state);
-static void marian_m2_set_bit_order(struct marian_card *marian, uint8_t state);
-static void marian_m2_set_port_mode(struct marian_card *marian, unsigned int port, uint8_t state);
-static uint8_t marian_m2_get_port_mode(struct marian_card *marian, unsigned int port);
+static void marian_m2_set_pll(struct marian_card *marian, u8 state);
+static void marian_m2_enable_tx(struct marian_card *marian, u8 state);
+static void marian_m2_set_float(struct marian_card *marian, u8 state);
+static void marian_m2_set_endianness(struct marian_card *marian, u8 state);
+static void marian_m2_set_bit_order(struct marian_card *marian, u8 state);
+static void marian_m2_set_port_mode(struct marian_card *marian, unsigned int port, u8 state);
+static u8 marian_m2_get_port_mode(struct marian_card *marian, unsigned int port);
 static void marian_m2_write_port_frame(struct marian_card *marian);
-static void marian_m2_set_port_frame(struct marian_card *marian, unsigned int port, uint8_t state);
-static uint8_t marian_m2_get_port_frame(struct marian_card *marian, unsigned int port);
+static void marian_m2_set_port_frame(struct marian_card *marian, unsigned int port, u8 state);
+static u8 marian_m2_get_port_frame(struct marian_card *marian, unsigned int port);
 
-static uint8_t marian_m2_spi_read(struct marian_card *marian, uint8_t adr)
+static u8 marian_m2_spi_read(struct marian_card *marian, u8 adr)
 {
-	uint8_t buf_in;
+	u8 buf_in;
 
 	adr = adr & 0x7F;
 
@@ -90,14 +90,14 @@ static uint8_t marian_m2_spi_read(struct marian_card *marian, uint8_t adr)
 	return 0;
 }
 
-static int marian_m2_spi_write(struct marian_card *marian, uint8_t adr, uint8_t val)
+static int marian_m2_spi_write(struct marian_card *marian, u8 adr, u8 val)
 {
-	uint8_t buf_out[2];
+	u8 buf_out[2];
 
 	buf_out[0] = 0x80 | adr;
 	buf_out[1] = val;
 
-	return marian_spi_transfer(marian, 0x02, 16, (uint8_t *)&buf_out, 0, NULL);
+	return marian_spi_transfer(marian, 0x02, 16, (u8 *)&buf_out, 0, NULL);
 }
 
 // RO controls
@@ -119,7 +119,7 @@ static int marian_m2_sync_state_get(struct snd_kcontrol *kcontrol,
 				    struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-	uint8_t v = marian_m2_spi_read(marian, 0x00);
+	u8 v = marian_m2_spi_read(marian, 0x00);
 
 	v = (v >> (kcontrol->private_value * 2)) & 0x3;
 	if (v == 3)
@@ -130,7 +130,7 @@ static int marian_m2_sync_state_get(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int marian_m2_sync_state_create(struct marian_card *marian, char *label, uint32_t idx)
+static int marian_m2_sync_state_create(struct marian_card *marian, char *label, u32 idx)
 {
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
@@ -162,7 +162,7 @@ static int marian_m2_input_channel_mode_get(struct snd_kcontrol *kcontrol,
 					    struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-	uint8_t v = marian_m2_spi_read(marian, 0x01);
+	u8 v = marian_m2_spi_read(marian, 0x01);
 
 	v = (v >> (kcontrol->private_value * 2)) & 0x1;
 	ucontrol->value.enumerated.item[0] = v;
@@ -171,7 +171,7 @@ static int marian_m2_input_channel_mode_get(struct snd_kcontrol *kcontrol,
 }
 
 static int marian_m2_input_channel_mode_create(struct marian_card *marian,
-					       char *label, uint32_t idx)
+					       char *label, u32 idx)
 {
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
@@ -202,7 +202,7 @@ static int marian_m2_input_frame_mode_get(struct snd_kcontrol *kcontrol,
 					  struct snd_ctl_elem_value *ucontrol)
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-	uint8_t v = marian_m2_spi_read(marian, 0x01);
+	u8 v = marian_m2_spi_read(marian, 0x01);
 
 	v = (v >> ((kcontrol->private_value * 2) + 1)) & 0x1;
 	ucontrol->value.enumerated.item[0] = v;
@@ -210,7 +210,7 @@ static int marian_m2_input_frame_mode_get(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int marian_m2_input_frame_mode_create(struct marian_card *marian, char *label, uint32_t idx)
+static int marian_m2_input_frame_mode_create(struct marian_card *marian, char *label, u32 idx)
 {
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
@@ -249,7 +249,7 @@ static int marian_m2_output_channel_mode_put(struct snd_kcontrol *kcontrol,
 }
 
 static int marian_m2_output_channel_mode_create(struct marian_card *marian,
-						char *label, uint32_t idx)
+						char *label, u32 idx)
 {
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
@@ -300,7 +300,7 @@ static int marian_m2_output_frame_mode_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int marian_m2_output_frame_mode_create(struct marian_card *marian, char *label, uint32_t idx)
+static int marian_m2_output_frame_mode_create(struct marian_card *marian, char *label, u32 idx)
 {
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
@@ -440,7 +440,7 @@ void marian_m2_create_controls(struct marian_card *marian)
  * Enable (state=1) or disable (state=0) the external PLL for the
  * MADI FPGA.
  */
-static void marian_m2_set_pll(struct marian_card *marian, uint8_t state)
+static void marian_m2_set_pll(struct marian_card *marian, u8 state)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
 
@@ -448,7 +448,7 @@ static void marian_m2_set_pll(struct marian_card *marian, uint8_t state)
 	marian_m2_spi_write(marian, 0x40, spec->shadow_40);
 }
 
-static void marian_m2_enable_tx(struct marian_card *marian, uint8_t state)
+static void marian_m2_enable_tx(struct marian_card *marian, u8 state)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
 
@@ -457,7 +457,7 @@ static void marian_m2_enable_tx(struct marian_card *marian, uint8_t state)
 }
 
 // @param state 0=int, 1=float
-static void marian_m2_set_float(struct marian_card *marian, uint8_t state)
+static void marian_m2_set_float(struct marian_card *marian, u8 state)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
 
@@ -466,7 +466,7 @@ static void marian_m2_set_float(struct marian_card *marian, uint8_t state)
 }
 
 // @param state 0=big endian, 1=little endian
-static void marian_m2_set_endianness(struct marian_card *marian, uint8_t state)
+static void marian_m2_set_endianness(struct marian_card *marian, u8 state)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
 
@@ -475,7 +475,7 @@ static void marian_m2_set_endianness(struct marian_card *marian, uint8_t state)
 }
 
 // @param state 0=MSB first, 1=LSB first
-static void marian_m2_set_bit_order(struct marian_card *marian, uint8_t state)
+static void marian_m2_set_bit_order(struct marian_card *marian, u8 state)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
 
@@ -483,7 +483,7 @@ static void marian_m2_set_bit_order(struct marian_card *marian, uint8_t state)
 	marian_m2_spi_write(marian, 0x41, spec->shadow_41);
 }
 
-static void marian_m2_set_port_mode(struct marian_card *marian, unsigned int port, uint8_t state)
+static void marian_m2_set_port_mode(struct marian_card *marian, unsigned int port, u8 state)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
 
@@ -497,7 +497,7 @@ static void marian_m2_set_port_mode(struct marian_card *marian, unsigned int por
 	marian_m2_spi_write(marian, 0x42, spec->shadow_42);
 }
 
-static uint8_t marian_m2_get_port_mode(struct marian_card *marian, unsigned int port)
+static u8 marian_m2_get_port_mode(struct marian_card *marian, unsigned int port)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
 
@@ -524,7 +524,7 @@ static void marian_m2_write_port_frame(struct marian_card *marian)
 	marian_m2_spi_write(marian, 0x42, spec->shadow_42);
 }
 
-static void marian_m2_set_port_frame(struct marian_card *marian, unsigned int port, uint8_t state)
+static void marian_m2_set_port_frame(struct marian_card *marian, unsigned int port, u8 state)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
 
@@ -533,7 +533,7 @@ static void marian_m2_set_port_frame(struct marian_card *marian, unsigned int po
 	marian_m2_write_port_frame(marian);
 }
 
-static uint8_t marian_m2_get_port_frame(struct marian_card *marian, unsigned int port)
+static u8 marian_m2_get_port_frame(struct marian_card *marian, unsigned int port)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
 
@@ -592,7 +592,7 @@ void marian_m2_init_codec(struct marian_card *marian)
 
 void marian_m2_prepare(struct marian_card *marian)
 {
-	uint32_t mask = 0xFFFFFFFF;
+	u32 mask = 0xFFFFFFFF;
 
 	writel(mask, marian->iobase + 0x20);
 	writel(mask, marian->iobase + 0x24);
@@ -607,9 +607,9 @@ void marian_m2_prepare(struct marian_card *marian)
 void marian_m2_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)
 {
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
-	uint8_t v1, v2;
+	u8 v1, v2;
 #ifdef DEBUG
-	uint32_t *buf;
+	u32 *buf;
 	unsigned int i;
 #endif
 

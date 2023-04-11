@@ -82,10 +82,10 @@ void marian_seraph8_prepare(struct marian_card *marian)
 {
 	/*
 	 * MARIAN-AH:
-	 * uint32_t mask = 0xFF000000;
+	 * u32 mask = 0xFF000000;
 	 * Transfer enable Bits for all Analog Channels
 	 */
-	uint32_t mask = 0x000000FF;
+	u32 mask = 0x000000FF;
 
 	// arm channels
 
@@ -95,7 +95,7 @@ void marian_seraph8_prepare(struct marian_card *marian)
 
 void marian_seraph8_init_codec(struct marian_card *marian)
 {
-	uint8_t buf_out[2];
+	u8 buf_out[2];
 
 	// hold codecs reset line
 	WRITEL(0x00, marian->iobase + 0x14);
@@ -114,12 +114,12 @@ void marian_seraph8_init_codec(struct marian_card *marian)
 	buf_out[0] = 0xA1;
 	buf_out[1] = 0x03;
 
-	marian_spi_transfer(marian, 0x1E, 16, (uint8_t *)&buf_out, 0, NULL);
+	marian_spi_transfer(marian, 0x1E, 16, (u8 *)&buf_out, 0, NULL);
 
 	buf_out[0] = 0xA2;
 	buf_out[1] = 0x4D;
 
-	marian_spi_transfer(marian, 0x1E, 16, (uint8_t *)&buf_out, 0, NULL);
+	marian_spi_transfer(marian, 0x1E, 16, (u8 *)&buf_out, 0, NULL);
 
 	// switch input mute off
 	WRITEL(0x0, marian->iobase + 0x18);
@@ -127,13 +127,13 @@ void marian_seraph8_init_codec(struct marian_card *marian)
 
 void marian_seraph8_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)
 {
-	uint8_t v1, v2;
-	uint32_t *buf;
+	u8 v1, v2;
+	u32 *buf;
 	unsigned int i;
 
 	marian_proc_status_generic(marian, buffer);
 
-	buf = (uint32_t *)marian->dmabuf.area;
+	buf = (u32 *)marian->dmabuf.area;
 
 	for (i = 0; i < 512; i++) {
 		if (i % 64 == 0)

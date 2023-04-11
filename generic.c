@@ -13,7 +13,7 @@
 
 unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source)
 {
-	uint32_t val;
+	u32 val;
 	int tries = 5;
 
 	WRITEL(source & 0x7, marian->iobase + 0xC8);
@@ -54,7 +54,7 @@ static int marian_generic_frequency_get(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int marian_generic_frequency_create(struct marian_card *marian, char *label, uint32_t idx)
+int marian_generic_frequency_create(struct marian_card *marian, char *label, u32 idx)
 {
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
@@ -70,8 +70,8 @@ int marian_generic_frequency_create(struct marian_card *marian, char *label, uin
 
 void marian_generic_set_dco(struct marian_card *marian, unsigned int freq, unsigned int millis)
 {
-	uint64_t val, v2;
-	int64_t detune;
+	u64 val, v2;
+	s64 detune;
 
 	dev_dbg(marian->card->dev, "marian_generic_set_dco(.., %u, %u)\n", freq, millis);
 
@@ -411,17 +411,17 @@ int marian_generic_speedmode_create(struct marian_card *marian)
 	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
 }
 
-void marian_generic_set_clock_source(struct marian_card *marian, uint8_t source)
+void marian_generic_set_clock_source(struct marian_card *marian, u8 source)
 {
 	WRITEL(source, marian->iobase + 0x90);
 	marian->clock_source = source;
 }
 
 int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_write,
-			uint8_t *data_write, uint16_t bits_read, uint8_t *data_read)
+			u8 *data_write, uint16_t bits_read, u8 *data_read)
 {
 	int tries = 10;
-	uint32_t buf = 0;
+	u32 buf = 0;
 	unsigned int i;
 
 	dev_dbg(marian->card->dev,

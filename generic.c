@@ -333,7 +333,7 @@ void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speed
 		marian->speedmode = SPEEDMODE_SLOW;
 		break;
 	case SPEEDMODE_NORMAL:
-		WRITEL(0x03, marian->iobase + 0x80)
+		WRITEL(0x03, marian->iobase + 0x80);
 		WRITEL(0x01, marian->iobase + 0x8C); // for 96kHz in 2FS mode
 		marian->speedmode = SPEEDMODE_NORMAL;
 		break;

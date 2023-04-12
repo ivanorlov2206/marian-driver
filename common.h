@@ -34,7 +34,7 @@ typedef void (*marian_proc_ports_func)(struct marian_card *marian, struct snd_in
 
 #define WRITEL(val, adr)						\
 	do {								\
-		snd_printdd(KERN_DEBUG "writel(%02x, %08x) [%s:%u]\n",	\
+		snd_printdd(KERN_DEBUG "writel(%02x, %p) [%s:%u]\n",	\
 			    val, adr, __FILE__, __LINE__);		\
 			    writel(val, adr);				\
 	} while (0)

@@ -715,12 +715,12 @@ static int snd_marian_mmap(struct snd_pcm_substream *substream, struct vm_area_s
 	dev_dbg(marian->card->dev,
 		"(%d, %016lx)\n", substream->stream, vma->vm_start);
 	dev_dbg(marian->card->dev,
-		"  substream->runtime.dma_addr = %016lx (%016lx >> %u)\n  substream->runtime.dma_area = %016lx\n  substream->runtime.dma_bytes = %u\n",
-		substream->runtime->dma_addr >> PAGE_SHIFT, substream->runtime->dma_addr,
-		PAGE_SHIFT, substream->runtime->dma_area, substream->runtime->dma_bytes);
+		"  substream->runtime.dma_addr = %pad\n  substream->runtime.dma_area = %p\n  substream->runtime.dma_bytes = %zu\n",
+		&substream->runtime->dma_addr, substream->runtime->dma_area,
+		substream->runtime->dma_bytes);
 	dev_dbg(marian->card->dev,
-		"  vma->vm_start = %016lx\n  vma->vm_end = %016lx\n  vma->vm_page_prot = %016lx\n",
-		vma->vm_start, vma->vm_end, vma->vm_page_prot);
+		"  vma->vm_start = %016lx\n  vma->vm_end = %016lx\n",
+		vma->vm_start, vma->vm_end);
 
 	if (remap_pfn_range(vma, vma->vm_start, substream->runtime->dma_addr >> PAGE_SHIFT,
 			    vma->vm_end - vma->vm_start, vma->vm_page_prot) < 0) {

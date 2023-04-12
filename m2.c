@@ -259,7 +259,7 @@ static int marian_m2_output_frame_mode_put(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
-	dev_dbg(marian->card->dev, "%d -> %d\n",
+	dev_dbg(marian->card->dev, "%lu -> %u\n",
 		kcontrol->private_value, ucontrol->value.enumerated.item[0]);
 
 	marian_m2_set_port_frame(marian, kcontrol->private_value,

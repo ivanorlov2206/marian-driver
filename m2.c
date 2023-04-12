@@ -35,16 +35,12 @@ static int marian_m2_output_frame_mode_put(struct snd_kcontrol *kcontrol,
 static int marian_m2_output_frame_mode_create(struct marian_card *marian,
 					      char *label, u32 idx);
 
-static void marian_m2_set_pll(struct marian_card *marian, u8 state);
-static void marian_m2_enable_tx(struct marian_card *marian, u8 state);
 static void marian_m2_set_float(struct marian_card *marian, u8 state);
 static void marian_m2_set_endianness(struct marian_card *marian, u8 state);
-static void marian_m2_set_bit_order(struct marian_card *marian, u8 state);
 static void marian_m2_set_port_mode(struct marian_card *marian, unsigned int port, u8 state);
 static u8 marian_m2_get_port_mode(struct marian_card *marian, unsigned int port);
 static void marian_m2_write_port_frame(struct marian_card *marian);
 static void marian_m2_set_port_frame(struct marian_card *marian, unsigned int port, u8 state);
-static u8 marian_m2_get_port_frame(struct marian_card *marian, unsigned int port);
 
 static u8 marian_m2_spi_read(struct marian_card *marian, u8 adr)
 {
@@ -405,26 +401,6 @@ void marian_m2_create_controls(struct marian_card *marian)
 	marian_generic_dco_create(marian);
 }
 
-/*
- * Enable (state=1) or disable (state=0) the external PLL for the
- * MADI FPGA.
- */
-static void marian_m2_set_pll(struct marian_card *marian, u8 state)
-{
-	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
-
-	spec->shadow_40 = (spec->shadow_40 & ~(1 << M2_PLL)) | state << M2_PLL;
-	marian_m2_spi_write(marian, 0x40, spec->shadow_40);
-}
-
-static void marian_m2_enable_tx(struct marian_card *marian, u8 state)
-{
-	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
-
-	spec->shadow_41 = (spec->shadow_41 & ~(1 << M2_TX_ENABLE)) | state << M2_TX_ENABLE;
-	marian_m2_spi_write(marian, 0x41, spec->shadow_41);
-}
-
 // @param state 0=int, 1=float
 static void marian_m2_set_float(struct marian_card *marian, u8 state)
 {
@@ -440,15 +416,6 @@ static void marian_m2_set_endianness(struct marian_card *marian, u8 state)
 	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
 
 	spec->shadow_41 = (spec->shadow_41 & ~(1 << M2_ENDIANNESS)) | state << M2_ENDIANNESS;
-	marian_m2_spi_write(marian, 0x41, spec->shadow_41);
-}
-
-// @param state 0=MSB first, 1=LSB first
-static void marian_m2_set_bit_order(struct marian_card *marian, u8 state)
-{
-	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
-
-	spec->shadow_41 = (spec->shadow_41 & ~(1 << M2_BIT_ORDER)) | state << M2_BIT_ORDER;
 	marian_m2_spi_write(marian, 0x41, spec->shadow_41);
 }
 
@@ -500,16 +467,6 @@ static void marian_m2_set_port_frame(struct marian_card *marian, unsigned int po
 	spec->frame = (spec->frame & ~(1 << port)) | (state << port);
 
 	marian_m2_write_port_frame(marian);
-}
-
-static u8 marian_m2_get_port_frame(struct marian_card *marian, unsigned int port)
-{
-	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
-
-	if (port)
-		return (spec->shadow_42 >> M2_PORT2_FRAME) & 1;
-	else
-		return (spec->shadow_42 >> M2_PORT1_FRAME) & 1;
 }
 
 void marian_m2_set_speedmode(struct marian_card *marian, unsigned int speedmode)

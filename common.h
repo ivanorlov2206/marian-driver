@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
 #ifndef _COMMON_H_
 
 #define _COMMON_H_
@@ -87,6 +88,7 @@ struct marian_card {
 	int irq;
 
 	unsigned int idx;
+	/* card lock */
 	spinlock_t lock;
 
 	unsigned int stream_open;
@@ -135,29 +137,29 @@ struct marian_card {
 #define PCI_DEVICE_ID_MARIAN_SERAPH_8   0x4980
 #define PCI_DEVICE_ID_MARIAN_SERAPH_M2  0x5020
 
-#define RATE_SLOW 54000
-#define RATE_NORMAL 108000
+#define RATE_SLOW	54000
+#define RATE_NORMAL	108000
 
-#define SPEEDMODE_SLOW 1
+#define SPEEDMODE_SLOW	 1
 #define SPEEDMODE_NORMAL 2
-#define SPEEDMODE_FAST 4
+#define SPEEDMODE_FAST	 4
 
-#define MARIAN_PORTS_TYPE_INPUT 0
+#define MARIAN_PORTS_TYPE_INPUT	 0
 #define MARIAN_PORTS_TYPE_OUTPUT 1
 
-#define ERR_DEAD_WRITE BIT(0)
-#define ERR_DEAD_READ BIT(1)
-#define ERR_DATA_LOST BIT(2)
-#define ERR_PAGE_CONF BIT(3)
-#define ERR_INT_PLAY BIT(10)
-#define ERR_INT_REC BIT(13)
+#define ERR_DEAD_WRITE	BIT(0)
+#define ERR_DEAD_READ	BIT(1)
+#define ERR_DATA_LOST	BIT(2)
+#define ERR_PAGE_CONF	BIT(3)
+#define ERR_INT_PLAY	BIT(10)
+#define ERR_INT_REC	BIT(13)
 
-#define STATUS_ST_READY BIT(4)
-#define STATUS_INT_PLAY BIT(8)
-#define STATUS_INT_PPLAY BIT(9)
-#define STATUS_INT_REC BIT(11)
-#define STATUS_INT_PREC BIT(12)
-#define STATUS_INT_PREP BIT(14)
+#define STATUS_ST_READY		BIT(4)
+#define STATUS_INT_PLAY		BIT(8)
+#define STATUS_INT_PPLAY	BIT(9)
+#define STATUS_INT_REC		BIT(11)
+#define STATUS_INT_PREC		BIT(12)
+#define STATUS_INT_PREP		BIT(14)
 
 enum CLOCK_SOURCE {
 	CLOCK_SRC_INTERNAL = 0,

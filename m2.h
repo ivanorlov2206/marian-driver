@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
 #ifndef _M2_H_
 
 #define _M2_H_
@@ -15,10 +16,10 @@ void marian_m2_proc_ports(struct marian_card *marian,
 
 void marian_m2_set_speedmode(struct marian_card *marian, unsigned int speedmode);
 
-#define M2_CLOCK_SRC_DCO 1
-#define M2_CLOCK_SRC_SYNCBUS 2
-#define M2_CLOCK_SRC_MADI1 4
-#define M2_CLOCK_SRC_MADI2 5
+#define M2_CLOCK_SRC_DCO	1
+#define M2_CLOCK_SRC_SYNCBUS	2
+#define M2_CLOCK_SRC_MADI1	4
+#define M2_CLOCK_SRC_MADI2	5
 
 // MADI FPGA register 0x40
 // Use internal (=0) or external PLL (=1)

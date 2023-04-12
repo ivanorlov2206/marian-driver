@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
 /*
  *   ALSA driver for MARIAN Seraph audio interfaces
  *

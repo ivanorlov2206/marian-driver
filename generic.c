@@ -96,7 +96,7 @@ void marian_generic_set_dco(struct marian_card *marian, unsigned int freq, unsig
 	val = div_u64(val, 1000);
 
 	dev_dbg(marian->card->dev, "  -> 0x%016llx (%llu)\n", val, val);
-	WRITEL(val, marian->iobase + 0x88);
+	WRITEL((u32)val, marian->iobase + 0x88);
 
 	marian->dco = freq;
 	marian->dco_millis = millis;

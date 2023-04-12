@@ -154,8 +154,6 @@ int marian_generic_dco_int_create(struct marian_card *marian, char *label)
 static int marian_generic_dco_millis_info(struct snd_kcontrol *kcontrol,
 					  struct snd_ctl_elem_info *uinfo)
 {
-	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->count = 1;
 	uinfo->value.integer.min = 0;
@@ -202,8 +200,6 @@ int marian_generic_dco_millis_create(struct marian_card *marian, char *label)
 static int marian_generic_dco_detune_info(struct snd_kcontrol *kcontrol,
 					  struct snd_ctl_elem_info *uinfo)
 {
-	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->count = 1;
 	uinfo->value.integer.min = -200;

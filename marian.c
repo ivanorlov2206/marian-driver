@@ -14,10 +14,6 @@
 #include "m2.h"
 #include "seraph8.h"
 
-static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
-			     struct marian_card_descriptor *desc, unsigned int idx);
-static void snd_marian_card_free(struct snd_card *card);
-
 // ALSA interface
 static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 			     struct marian_card_descriptor *desc, unsigned int idx);

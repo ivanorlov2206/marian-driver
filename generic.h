@@ -16,17 +16,6 @@ void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speed
 void marian_generic_set_clock_source(struct marian_card *marian, u8 source);
 void marian_generic_set_dco(struct marian_card *marian, u32 freq, u32 millis);
 
-#define SPI_WAIT_FOR_AR(tries)						\
-	do {								\
-		tries = 10;						\
-		while (tries > 0) {					\
-			if (readl(marian->iobase + 0x70) == 0x80000000) \
-				break;					\
-			msleep(1);					\
-			tries--;					\
-		}							\
-	} while (0)
-
 int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_write,
 			u8 *data_write, uint16_t bits_read, u8 *data_read);
 

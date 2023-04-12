@@ -414,10 +414,24 @@ void marian_generic_set_clock_source(struct marian_card *marian, u8 source)
 	marian->clock_source = source;
 }
 
+static int spi_wait_for_ar(struct marian_card *marian)
+{
+	int tries = 10;
+
+	while (tries > 0) {
+		if (readl(marian->iobase + 0x70) == 0x80000000)
+			break;
+		msleep(1);
+		tries--;
+	}
+	if (tries == 0)
+		return -EIO;
+	return 0;
+}
+
 int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_write,
 			u8 *data_write, uint16_t bits_read, u8 *data_read)
 {
-	int tries = 10;
 	u32 buf = 0;
 	unsigned int i;
 
@@ -425,8 +439,7 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 		"(.., 0x%04x, %u, [%02x, %02x], %u, ..)\n", cs, bits_write,
 		data_write[0], data_write[1], bits_read);
 
-	SPI_WAIT_FOR_AR(tries);
-	if (tries == 0) {
+	if (spi_wait_for_ar(marian) < 0) {
 		dev_dbg(marian->card->dev, "Resetting SPI bus\n");
 		writel(0x1234, marian->iobase + 0x70);
 	}
@@ -444,9 +457,7 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 		writel(buf, marian->iobase + 0x6C); // write data left aligned
 	}
 	if (bits_read > 0 && bits_read <= 32) {
-		tries = 10;
-		SPI_WAIT_FOR_AR(tries);
-		if (tries == 0) {
+		if (spi_wait_for_ar(marian) < 0) {
 			dev_dbg(marian->card->dev,
 				"Bus didn't signal AR\n");
 			return -1;

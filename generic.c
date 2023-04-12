@@ -17,7 +17,7 @@ unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source
 	u32 val;
 	int tries = 5;
 
-	WRITEL(source & 0x7, marian->iobase + 0xC8);
+	writel_and_log(source & 0x7, marian->iobase + 0xC8);
 
 	while (tries > 0) {
 		val = readl(marian->iobase + 0x94);
@@ -96,7 +96,7 @@ void marian_generic_set_dco(struct marian_card *marian, unsigned int freq, unsig
 	val = div_u64(val, 1000);
 
 	dev_dbg(marian->card->dev, "  -> 0x%016llx (%llu)\n", val, val);
-	WRITEL((u32)val, marian->iobase + 0x88);
+	writel_and_log((u32)val, marian->iobase + 0x88);
 
 	marian->dco = freq;
 	marian->dco_millis = millis;
@@ -259,10 +259,10 @@ int marian_generic_init(struct marian_card *marian)
 		marian->desc->set_speedmode = marian_generic_set_speedmode;
 
 	// reset DMA engine
-	WRITEL(0x00000000, marian->iobase);
+	writel_and_log(0x00000000, marian->iobase);
 
 	// disable play interrupt
-	WRITEL(0x02, marian->iobase + 0xAC);
+	writel_and_log(0x02, marian->iobase + 0xAC);
 
 	marian_generic_set_dco(marian, 48000, 0);
 
@@ -273,7 +273,7 @@ int marian_generic_init(struct marian_card *marian)
 	marian_generic_set_clock_source(marian, 1);
 
 	// init SPI clock divider
-	WRITEL(0x1F, marian->iobase + 0x74);
+	writel_and_log(0x1F, marian->iobase + 0x74);
 
 	return 0;
 }
@@ -324,18 +324,18 @@ void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speed
 
 	switch (speedmode) {
 	case SPEEDMODE_SLOW:
-		WRITEL(0x03, marian->iobase + 0x80);
-		WRITEL(0x00, marian->iobase + 0x8C); // for 48kHz in 1FS mode
+		writel_and_log(0x03, marian->iobase + 0x80);
+		writel_and_log(0x00, marian->iobase + 0x8C); // for 48kHz in 1FS mode
 		marian->speedmode = SPEEDMODE_SLOW;
 		break;
 	case SPEEDMODE_NORMAL:
-		WRITEL(0x03, marian->iobase + 0x80);
-		WRITEL(0x01, marian->iobase + 0x8C); // for 96kHz in 2FS mode
+		writel_and_log(0x03, marian->iobase + 0x80);
+		writel_and_log(0x01, marian->iobase + 0x8C); // for 96kHz in 2FS mode
 		marian->speedmode = SPEEDMODE_NORMAL;
 		break;
 	case SPEEDMODE_FAST:
-		WRITEL(0x03, marian->iobase + 0x80);
-		WRITEL(0x00, marian->iobase + 0x8C); // for 192kHz in 4FS mode
+		writel_and_log(0x03, marian->iobase + 0x80);
+		writel_and_log(0x00, marian->iobase + 0x8C); // for 192kHz in 4FS mode
 		marian->speedmode = SPEEDMODE_FAST;
 		break;
 	}
@@ -410,7 +410,7 @@ int marian_generic_speedmode_create(struct marian_card *marian)
 
 void marian_generic_set_clock_source(struct marian_card *marian, u8 source)
 {
-	WRITEL(source, marian->iobase + 0x90);
+	writel_and_log(source, marian->iobase + 0x90);
 	marian->clock_source = source;
 }
 

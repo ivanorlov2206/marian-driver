@@ -90,8 +90,8 @@ void marian_seraph8_prepare(struct marian_card *marian)
 
 	// arm channels
 
-	WRITEL(mask, marian->iobase + 0x08);
-	WRITEL(mask, marian->iobase + 0x0C);
+	writel_and_log(mask, marian->iobase + 0x08);
+	writel_and_log(mask, marian->iobase + 0x0C);
 }
 
 void marian_seraph8_init_codec(struct marian_card *marian)
@@ -99,16 +99,16 @@ void marian_seraph8_init_codec(struct marian_card *marian)
 	u8 buf_out[2];
 
 	// hold codecs reset line
-	WRITEL(0x00, marian->iobase + 0x14);
+	writel_and_log(0x00, marian->iobase + 0x14);
 
 	// init codec clock divider (128FS)
-	WRITEL(0x02, marian->iobase + 0x7C);
+	writel_and_log(0x02, marian->iobase + 0x7C);
 
 	// release codecs reset line
-	WRITEL(0x01, marian->iobase + 0x14);
+	writel_and_log(0x01, marian->iobase + 0x14);
 
 	// enable all codecs
-	WRITEL(0x0F, marian->iobase + 0x14);
+	writel_and_log(0x0F, marian->iobase + 0x14);
 
 	// initialize codecs via SPI
 
@@ -123,7 +123,7 @@ void marian_seraph8_init_codec(struct marian_card *marian)
 	marian_spi_transfer(marian, 0x1E, 16, (u8 *)&buf_out, 0, NULL);
 
 	// switch input mute off
-	WRITEL(0x0, marian->iobase + 0x18);
+	writel_and_log(0x0, marian->iobase + 0x18);
 }
 
 void marian_seraph8_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)

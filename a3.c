@@ -123,11 +123,11 @@ void marian_a3_prepare(struct marian_card *marian)
 	u32 mask = 0x00FFFFFF;
 
 	// arm channels
-	WRITEL(mask, marian->iobase + 0x08);
-	WRITEL(mask, marian->iobase + 0x0C);
+	writel_and_log(mask, marian->iobase + 0x08);
+	writel_and_log(mask, marian->iobase + 0x0C);
 
 	// unmute inputs
-	WRITEL(0x00, marian->iobase + 0x18);
+	writel_and_log(0x00, marian->iobase + 0x18);
 }
 
 int marian_a3_init(struct marian_card *marian)
@@ -140,7 +140,7 @@ int marian_a3_init(struct marian_card *marian)
 		return err;
 
 	// ADAT TX enable
-	WRITEL(0x01, marian->iobase + 0x14);
+	writel_and_log(0x01, marian->iobase + 0x14);
 
 	return 0;
 }

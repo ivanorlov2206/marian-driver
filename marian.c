@@ -575,18 +575,18 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 		dev_dbg(marian->card->dev, "  setting card's DMA ADR to %08x\n",
 			(unsigned int)marian->capture_substream->runtime->dma_addr);
 		// We really want the dma_addr to be in the 32 bits. DMA mask needs to be set.
-		WRITEL((u32)marian->capture_substream->runtime->dma_addr,
-		       marian->iobase + SERAPH_WR_DMA_ADR); // TODO Set DMA mask
+		writel_and_log((u32)marian->capture_substream->runtime->dma_addr,
+			       marian->iobase + SERAPH_WR_DMA_ADR); // TODO Set DMA mask
 	} else if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		dev_dbg(marian->card->dev, "  setting card's DMA ADR to %pad\n",
 			&marian->playback_substream->runtime->dma_addr);
 		// Same here: we need to set the DMA mask. Only then the conversion will be right
-		WRITEL((u32)marian->playback_substream->runtime->dma_addr,
-		       marian->iobase + SERAPH_WR_DMA_ADR);
+		writel_and_log((u32)marian->playback_substream->runtime->dma_addr,
+			       marian->iobase + SERAPH_WR_DMA_ADR);
 	}
 	dev_dbg(marian->card->dev,
 		"  setting card's DMA block count to %d\n", marian->period_size / 16);
-	WRITEL(marian->period_size / 16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
+	writel_and_log(marian->period_size / 16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
 
 	// apply optional card specific hw constraints
 	if (marian->desc->hw_constraints_func)
@@ -640,28 +640,28 @@ static int snd_marian_trigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_START:
 		marian_silence(marian);
 		dev_dbg(marian->card->dev, "  enabling DMA transfers\n");
-		WRITEL(0x3, marian->iobase + SERAPH_WR_DMA_ENABLE);
+		writel_and_log(0x3, marian->iobase + SERAPH_WR_DMA_ENABLE);
 		dev_dbg(marian->card->dev, "  enabling IRQ\n");
-		WRITEL(0x2, marian->iobase + SERAPH_WR_IE_ENABLE);
+		writel_and_log(0x2, marian->iobase + SERAPH_WR_IE_ENABLE);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 		dev_dbg(marian->card->dev, "  disabling IRQ\n");
-		WRITEL(0x0, marian->iobase + SERAPH_WR_IE_ENABLE);
+		writel_and_log(0x0, marian->iobase + SERAPH_WR_IE_ENABLE);
 		dev_dbg(marian->card->dev, "  disabling DMA transfers\n");
-		WRITEL(0x0, marian->iobase + SERAPH_WR_DMA_ENABLE);
+		writel_and_log(0x0, marian->iobase + SERAPH_WR_DMA_ENABLE);
 		marian_silence(marian);
 
 		// unarm channels to inhibit playback from the FPGA's internal buffer
-		WRITEL(0, marian->iobase + 0x08);
-		WRITEL(0, marian->iobase + 0x0C);
-		WRITEL(0, marian->iobase + 0x20);
-		WRITEL(0, marian->iobase + 0x24);
-		WRITEL(0, marian->iobase + 0x28);
-		WRITEL(0, marian->iobase + 0x2C);
-		WRITEL(0, marian->iobase + 0x30);
-		WRITEL(0, marian->iobase + 0x34);
-		WRITEL(0, marian->iobase + 0x38);
-		WRITEL(0, marian->iobase + 0x3C);
+		writel_and_log(0, marian->iobase + 0x08);
+		writel_and_log(0, marian->iobase + 0x0C);
+		writel_and_log(0, marian->iobase + 0x20);
+		writel_and_log(0, marian->iobase + 0x24);
+		writel_and_log(0, marian->iobase + 0x28);
+		writel_and_log(0, marian->iobase + 0x2C);
+		writel_and_log(0, marian->iobase + 0x30);
+		writel_and_log(0, marian->iobase + 0x34);
+		writel_and_log(0, marian->iobase + 0x38);
+		writel_and_log(0, marian->iobase + 0x3C);
 		break;
 	default:
 		return -EINVAL;

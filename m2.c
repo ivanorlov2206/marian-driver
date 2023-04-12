@@ -535,7 +535,7 @@ int marian_m2_init(struct marian_card *marian)
 	if (err != 0)
 		return err;
 
-	spec = kzalloc(sizeof(struct m2_specific), GFP_KERNEL);
+	spec = kzalloc(sizeof(*spec), GFP_KERNEL);
 	if (!spec) {
 		dev_dbg(marian->card->dev,
 			"Cannot allocate card specific structure\n");

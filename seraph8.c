@@ -128,7 +128,6 @@ void marian_seraph8_init_codec(struct marian_card *marian)
 
 void marian_seraph8_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)
 {
-	u8 v1, v2;
 	u32 *buf;
 	unsigned int i;
 

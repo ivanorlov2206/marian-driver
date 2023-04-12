@@ -362,7 +362,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	err = pci_enable_device(pci);
 	if (err < 0)
 		return err;
-
+	// TODO set dma mask here
 	pci_set_master(pci);
 
 	err = pci_request_regions(pci, "marian");

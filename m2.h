@@ -16,6 +16,13 @@ void marian_m2_proc_ports(struct marian_card *marian,
 
 void marian_m2_set_speedmode(struct marian_card *marian, unsigned int speedmode);
 
+struct m2_specific {
+	u8 shadow_40;
+	u8 shadow_41;
+	u8 shadow_42;
+	u8 frame;
+};
+
 #define M2_CLOCK_SRC_DCO	1
 #define M2_CLOCK_SRC_SYNCBUS	2
 #define M2_CLOCK_SRC_MADI1	4

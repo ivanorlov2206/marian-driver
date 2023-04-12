@@ -3,13 +3,6 @@
 #include "generic.h"
 #include "m2.h"
 
-struct m2_specific {
-	u8 shadow_40;
-	u8 shadow_41;
-	u8 shadow_42;
-	u8 frame;
-};
-
 static u8 marian_m2_spi_read(struct marian_card *marian, u8 adr);
 static int marian_m2_spi_write(struct marian_card *marian, u8 adr, u8 val);
 static int marian_m2_sync_state_info(struct snd_kcontrol *kcontrol,

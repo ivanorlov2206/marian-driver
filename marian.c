@@ -578,12 +578,14 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 		dev_dbg(marian->card->dev, "  setting card's DMA ADR to %08x\n",
 			(unsigned int)marian->capture_substream->runtime->dma_addr);
-		WRITEL(marian->capture_substream->runtime->dma_addr,
-		       marian->iobase + SERAPH_WR_DMA_ADR); // TODO Fix address conversions
+		// We really want the dma_addr to be in the 32 bits. DMA mask needs to be set.
+		WRITEL((u32)marian->capture_substream->runtime->dma_addr,
+		       marian->iobase + SERAPH_WR_DMA_ADR); // TODO Set DMA mask
 	} else if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		dev_dbg(marian->card->dev, "  setting card's DMA ADR to %08x\n",
-			(unsigned int)marian->playback_substream->runtime->dma_addr);
-		WRITEL(marian->playback_substream->runtime->dma_addr,
+		dev_dbg(marian->card->dev, "  setting card's DMA ADR to %pad\n",
+			&marian->playback_substream->runtime->dma_addr);
+		// Same here: we need to set the DMA mask. Only then the conversion will be right
+		WRITEL((u32)marian->playback_substream->runtime->dma_addr,
 		       marian->iobase + SERAPH_WR_DMA_ADR);
 	}
 	dev_dbg(marian->card->dev,

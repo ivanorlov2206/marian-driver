@@ -251,14 +251,8 @@ static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci
 	dev_dbg(&pci->dev, "Found a %s, creating instance\n",
 		descriptors[pci_id->driver_data].name);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 16, 0)
-	err = snd_card_create(index[dev], id[dev],
-			      THIS_MODULE, sizeof(struct marian_card), &card);
-#else
 	err = snd_card_new(&pci->dev, index[dev], id[dev],
 			   THIS_MODULE, sizeof(struct marian_card), &card);
-#endif
-
 	if (err < 0)
 		return err;
 

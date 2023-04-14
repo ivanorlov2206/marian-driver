@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-#ifndef _COMMON_H_
+#ifndef __SOUND_MARIAN_H
 
-#define _COMMON_H_
+#define __SOUND_MARIAN_H
 
 #include <sound/core.h>
 #include <sound/control.h>
@@ -170,5 +170,93 @@ enum CLOCK_SOURCE {
 	CLOCK_SRC_INP2	   = 3,
 	CLOCK_SRC_INP3	   = 4,
 };
+
+int marian_generic_init(struct marian_card *marian);
+void marian_proc_status_generic(struct marian_card *marian, struct snd_info_buffer *buffer);
+void marian_proc_ports_generic(struct marian_card *marian, struct snd_info_buffer *buffer,
+			       unsigned int type);
+unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source);
+int marian_generic_frequency_create(struct marian_card *marian, char *label, u32 idx);
+int marian_generic_speedmode_create(struct marian_card *marian);
+int marian_generic_dco_create(struct marian_card *marian);
+
+void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speedmode);
+void marian_generic_set_clock_source(struct marian_card *marian, u8 source);
+void marian_generic_set_dco(struct marian_card *marian, u32 freq, u32 millis);
+
+int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_write,
+			u8 *data_write, uint16_t bits_read, u8 *data_read);
+
+void marian_a3_prepare(struct marian_card *marian);
+int marian_a3_init(struct marian_card *marian);
+void marian_a3_proc_ports(struct marian_card *marian, struct snd_info_buffer *buffer,
+			  unsigned int type);
+void marian_a3_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer);
+void marian_a3_create_controls(struct marian_card *marian);
+
+#define PORTS_COUNT 23
+
+#define A3_CLOCK_SRC_DCO	1
+#define A3_CLOCK_SRC_SYNCBUS	2
+#define A3_CLOCK_SRC_ADAT1	4
+#define A3_CLOCK_SRC_ADAT2	5
+#define A3_CLOCK_SRC_ADAT3	6
+
+void marian_m2_constraints(struct marian_card *marian, struct snd_pcm_substream *substream,
+			   struct snd_pcm_hw_params *params);
+void marian_m2_create_controls(struct marian_card *marian);
+int marian_m2_init(struct marian_card *marian);
+void marian_m2_free(struct marian_card *marian);
+void marian_m2_init_codec(struct marian_card *marian);
+void marian_m2_prepare(struct marian_card *marian);
+void marian_m2_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer);
+void marian_m2_proc_ports(struct marian_card *marian,
+			  struct snd_info_buffer *buffer, unsigned int type);
+
+void marian_m2_set_speedmode(struct marian_card *marian, unsigned int speedmode);
+
+struct m2_specific {
+	u8 shadow_40;
+	u8 shadow_41;
+	u8 shadow_42;
+	u8 frame;
+};
+
+#define M2_CLOCK_SRC_DCO	1
+#define M2_CLOCK_SRC_SYNCBUS	2
+#define M2_CLOCK_SRC_MADI1	4
+#define M2_CLOCK_SRC_MADI2	5
+
+// MADI FPGA register 0x40
+// Use internal (=0) or external PLL (=1)
+#define M2_PLL         2
+
+// MADI FPGA register 0x41
+// Enable both MADI transmitters (=1)
+#define M2_TX_ENABLE   0
+// Use int (=0) or 32bit IEEE float (=1)
+#define M2_INT_FLOAT   4
+// Big endian (=0), little endian (=1)
+#define M2_ENDIANNESS  5
+// MSB first (=0), LSB first (=1)
+#define M2_BIT_ORDER   6
+
+// MADI FPGA register 0x42
+// Send 56ch (=0) or 64ch (=1) MADI frames
+#define M2_PORT1_MODE  0
+// Send 48kHz (=0) or 96kHz (=1) MADI frames
+#define M2_PORT1_FRAME 1
+// Send 56ch (=0) or 64ch (=1) MADI frames
+#define M2_PORT2_MODE  2
+// Send 48kHz (=0) or 96kHz (=1) MADI frames
+#define M2_PORT2_FRAME 3
+
+void marian_seraph8_prepare(struct marian_card *marian);
+void marian_seraph8_init_codec(struct marian_card *marian);
+void marian_seraph8_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer);
+void marian_seraph8_create_controls(struct marian_card *marian);
+
+#define S8_CLOCK_SRC_DCO	1
+#define S8_CLOCK_SRC_SYNCBUS	2
 
 #endif

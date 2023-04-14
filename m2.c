@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-#include "common.h"
-#include "generic.h"
-#include "m2.h"
+#include "marian.h"
 
 static u8 marian_m2_spi_read(struct marian_card *marian, u8 adr);
 static int marian_m2_spi_write(struct marian_card *marian, u8 adr, u8 val);

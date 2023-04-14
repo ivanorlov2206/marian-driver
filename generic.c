@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-#include "common.h"
-#include "generic.h"
+#include "marian.h"
 
 // Generic ALSA control functions
 

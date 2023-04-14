@@ -8,11 +8,7 @@
 
 #include <linux/version.h>
 
-#include "common.h"
-#include "generic.h"
-#include "a3.h"
-#include "m2.h"
-#include "seraph8.h"
+#include "marian.h"
 
 // ALSA interface
 static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,

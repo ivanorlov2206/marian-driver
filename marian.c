@@ -265,25 +265,6 @@ static void snd_marian_remove(struct pci_dev *pci)
 	pci_set_drvdata(pci, NULL);
 }
 
-static struct pci_driver driver = {
-	.name = "MARIAN",
-	.id_table = snd_marian_ids,
-	.probe = snd_marian_probe,
-	.remove = snd_marian_remove,
-};
-
-static int __init alsa_card_marian_init(void)
-{
-	return pci_register_driver(&driver);
-}
-
-static void __exit alsa_card_marian_exit(void)
-{
-	pci_unregister_driver(&driver);
-}
-
-module_init(alsa_card_marian_init);
-module_exit(alsa_card_marian_exit);
 
 // card interface
 
@@ -1232,3 +1213,12 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 
 	return 0;
 }
+
+static struct pci_driver marian_driver = {
+	.name = "MARIAN",
+	.id_table = snd_marian_ids,
+	.probe = snd_marian_probe,
+	.remove = snd_marian_remove,
+};
+
+module_pci_driver(marian_driver);

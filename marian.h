@@ -16,8 +16,91 @@
 #include <sound/initval.h>
 #include <sound/info.h>
 
-struct marian_card;
+#define SERAPH_RD_IRQ_STATUS      0x00
+#define SERAPH_RD_HWPOINTER       0x8C
+
+#define SERAPH_WR_DMA_ADR         0x04
+#define SERAPH_WR_ENABLE_CAPTURE  0x08
+#define SERAPH_WR_ENABLE_PLAYBACK 0x0C
+#define SERAPH_WR_DMA_BLOCKS      0x10
+
+#define SERAPH_WR_DMA_ENABLE      0x84
+#define SERAPH_WR_IE_ENABLE       0xAC
+
+#define PCI_VENDOR_ID_MARIAN            0x1382
+#define PCI_DEVICE_ID_MARIAN_SERAPH_A3  0x4630
+#define PCI_DEVICE_ID_MARIAN_C_BOX      0x4640
+#define PCI_DEVICE_ID_MARIAN_SERAPH_AD2 0x4720
+#define PCI_DEVICE_ID_MARIAN_SERAPH_D4  0x4840
+#define PCI_DEVICE_ID_MARIAN_SERAPH_D8  0x4880
+#define PCI_DEVICE_ID_MARIAN_SERAPH_8   0x4980
+#define PCI_DEVICE_ID_MARIAN_SERAPH_M2  0x5020
+
+#define RATE_SLOW	54000
+#define RATE_NORMAL	108000
+
+#define SPEEDMODE_SLOW	 1
+#define SPEEDMODE_NORMAL 2
+#define SPEEDMODE_FAST	 4
+
+#define MARIAN_PORTS_TYPE_INPUT	 0
+#define MARIAN_PORTS_TYPE_OUTPUT 1
+
+#define ERR_DEAD_WRITE	BIT(0)
+#define ERR_DEAD_READ	BIT(1)
+#define ERR_DATA_LOST	BIT(2)
+#define ERR_PAGE_CONF	BIT(3)
+#define ERR_INT_PLAY	BIT(10)
+#define ERR_INT_REC	BIT(13)
+
+#define STATUS_ST_READY		BIT(4)
+#define STATUS_INT_PLAY		BIT(8)
+#define STATUS_INT_PPLAY	BIT(9)
+#define STATUS_INT_REC		BIT(11)
+#define STATUS_INT_PREC		BIT(12)
+#define STATUS_INT_PREP		BIT(14)
+
+#define PORTS_COUNT 23
+#define A3_CLOCK_SRC_DCO	1
+#define A3_CLOCK_SRC_SYNCBUS	2
+#define A3_CLOCK_SRC_ADAT1	4
+#define A3_CLOCK_SRC_ADAT2	5
+#define A3_CLOCK_SRC_ADAT3	6
+
+#define M2_CLOCK_SRC_DCO	1
+#define M2_CLOCK_SRC_SYNCBUS	2
+#define M2_CLOCK_SRC_MADI1	4
+#define M2_CLOCK_SRC_MADI2	5
+
+// MADI FPGA register 0x40
+// Use internal (=0) or external PLL (=1)
+#define M2_PLL         2
+
+// MADI FPGA register 0x41
+// Enable both MADI transmitters (=1)
+#define M2_TX_ENABLE   0
+// Use int (=0) or 32bit IEEE float (=1)
+#define M2_INT_FLOAT   4
+// Big endian (=0), little endian (=1)
+#define M2_ENDIANNESS  5
+// MSB first (=0), LSB first (=1)
+#define M2_BIT_ORDER   6
+
+// MADI FPGA register 0x42
+// Send 56ch (=0) or 64ch (=1) MADI frames
+#define M2_PORT1_MODE  0
+// Send 48kHz (=0) or 96kHz (=1) MADI frames
+#define M2_PORT1_FRAME 1
+// Send 56ch (=0) or 64ch (=1) MADI frames
+#define M2_PORT2_MODE  2
+// Send 48kHz (=0) or 96kHz (=1) MADI frames
+#define M2_PORT2_FRAME 3
+
+#define S8_CLOCK_SRC_DCO	1
+#define S8_CLOCK_SRC_SYNCBUS	2
+
 struct marian_card_descriptor;
+struct marian_card;
 
 typedef void (*marian_hw_constraints_func)(struct marian_card *marian,
 					   struct snd_pcm_substream *substream,
@@ -31,15 +114,6 @@ typedef void (*marian_set_speedmode_func)(struct marian_card *marian, unsigned i
 typedef void (*marian_proc_status_func)(struct marian_card *marian, struct snd_info_buffer *buffer);
 typedef void (*marian_proc_ports_func)(struct marian_card *marian, struct snd_info_buffer *buffer,
 					unsigned int type);
-
-static __always_inline void writel_and_log(u32 val, void *addr)
-{
-	snd_printdd(KERN_DEBUG "writel(%02x, %p) [%s:%u]\n",
-		    val, addr, __FILE__, __LINE__);
-	writel(val, addr);
-}
-
-inline void writel_and_log(u32 val, void *addr);
 
 struct marian_card_descriptor {
 	char *name;
@@ -119,50 +193,6 @@ struct marian_card {
 	void *card_specific;
 };
 
-#define SERAPH_RD_IRQ_STATUS      0x00
-#define SERAPH_RD_HWPOINTER       0x8C
-
-#define SERAPH_WR_DMA_ADR         0x04
-#define SERAPH_WR_ENABLE_CAPTURE  0x08
-#define SERAPH_WR_ENABLE_PLAYBACK 0x0C
-#define SERAPH_WR_DMA_BLOCKS      0x10
-
-#define SERAPH_WR_DMA_ENABLE      0x84
-#define SERAPH_WR_IE_ENABLE       0xAC
-
-#define PCI_VENDOR_ID_MARIAN            0x1382
-#define PCI_DEVICE_ID_MARIAN_SERAPH_A3  0x4630
-#define PCI_DEVICE_ID_MARIAN_C_BOX      0x4640
-#define PCI_DEVICE_ID_MARIAN_SERAPH_AD2 0x4720
-#define PCI_DEVICE_ID_MARIAN_SERAPH_D4  0x4840
-#define PCI_DEVICE_ID_MARIAN_SERAPH_D8  0x4880
-#define PCI_DEVICE_ID_MARIAN_SERAPH_8   0x4980
-#define PCI_DEVICE_ID_MARIAN_SERAPH_M2  0x5020
-
-#define RATE_SLOW	54000
-#define RATE_NORMAL	108000
-
-#define SPEEDMODE_SLOW	 1
-#define SPEEDMODE_NORMAL 2
-#define SPEEDMODE_FAST	 4
-
-#define MARIAN_PORTS_TYPE_INPUT	 0
-#define MARIAN_PORTS_TYPE_OUTPUT 1
-
-#define ERR_DEAD_WRITE	BIT(0)
-#define ERR_DEAD_READ	BIT(1)
-#define ERR_DATA_LOST	BIT(2)
-#define ERR_PAGE_CONF	BIT(3)
-#define ERR_INT_PLAY	BIT(10)
-#define ERR_INT_REC	BIT(13)
-
-#define STATUS_ST_READY		BIT(4)
-#define STATUS_INT_PLAY		BIT(8)
-#define STATUS_INT_PPLAY	BIT(9)
-#define STATUS_INT_REC		BIT(11)
-#define STATUS_INT_PREC		BIT(12)
-#define STATUS_INT_PREP		BIT(14)
-
 enum CLOCK_SOURCE {
 	CLOCK_SRC_INTERNAL = 0,
 	CLOCK_SRC_SYNCBUS  = 1,
@@ -170,6 +200,20 @@ enum CLOCK_SOURCE {
 	CLOCK_SRC_INP2	   = 3,
 	CLOCK_SRC_INP3	   = 4,
 };
+
+struct m2_specific {
+	u8 shadow_40;
+	u8 shadow_41;
+	u8 shadow_42;
+	u8 frame;
+};
+
+static __always_inline void writel_and_log(u32 val, void *addr)
+{
+	snd_printdd(KERN_DEBUG "writel(%02x, %p) [%s:%u]\n",
+		    val, addr, __FILE__, __LINE__);
+	writel(val, addr);
+}
 
 int marian_generic_init(struct marian_card *marian);
 void marian_proc_status_generic(struct marian_card *marian, struct snd_info_buffer *buffer);
@@ -194,14 +238,6 @@ void marian_a3_proc_ports(struct marian_card *marian, struct snd_info_buffer *bu
 void marian_a3_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer);
 void marian_a3_create_controls(struct marian_card *marian);
 
-#define PORTS_COUNT 23
-
-#define A3_CLOCK_SRC_DCO	1
-#define A3_CLOCK_SRC_SYNCBUS	2
-#define A3_CLOCK_SRC_ADAT1	4
-#define A3_CLOCK_SRC_ADAT2	5
-#define A3_CLOCK_SRC_ADAT3	6
-
 void marian_m2_constraints(struct marian_card *marian, struct snd_pcm_substream *substream,
 			   struct snd_pcm_hw_params *params);
 void marian_m2_create_controls(struct marian_card *marian);
@@ -215,48 +251,9 @@ void marian_m2_proc_ports(struct marian_card *marian,
 
 void marian_m2_set_speedmode(struct marian_card *marian, unsigned int speedmode);
 
-struct m2_specific {
-	u8 shadow_40;
-	u8 shadow_41;
-	u8 shadow_42;
-	u8 frame;
-};
-
-#define M2_CLOCK_SRC_DCO	1
-#define M2_CLOCK_SRC_SYNCBUS	2
-#define M2_CLOCK_SRC_MADI1	4
-#define M2_CLOCK_SRC_MADI2	5
-
-// MADI FPGA register 0x40
-// Use internal (=0) or external PLL (=1)
-#define M2_PLL         2
-
-// MADI FPGA register 0x41
-// Enable both MADI transmitters (=1)
-#define M2_TX_ENABLE   0
-// Use int (=0) or 32bit IEEE float (=1)
-#define M2_INT_FLOAT   4
-// Big endian (=0), little endian (=1)
-#define M2_ENDIANNESS  5
-// MSB first (=0), LSB first (=1)
-#define M2_BIT_ORDER   6
-
-// MADI FPGA register 0x42
-// Send 56ch (=0) or 64ch (=1) MADI frames
-#define M2_PORT1_MODE  0
-// Send 48kHz (=0) or 96kHz (=1) MADI frames
-#define M2_PORT1_FRAME 1
-// Send 56ch (=0) or 64ch (=1) MADI frames
-#define M2_PORT2_MODE  2
-// Send 48kHz (=0) or 96kHz (=1) MADI frames
-#define M2_PORT2_FRAME 3
-
 void marian_seraph8_prepare(struct marian_card *marian);
 void marian_seraph8_init_codec(struct marian_card *marian);
 void marian_seraph8_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer);
 void marian_seraph8_create_controls(struct marian_card *marian);
-
-#define S8_CLOCK_SRC_DCO	1
-#define S8_CLOCK_SRC_SYNCBUS	2
 
 #endif

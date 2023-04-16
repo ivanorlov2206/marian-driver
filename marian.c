@@ -265,7 +265,6 @@ static void snd_marian_remove(struct pci_dev *pci)
 	pci_set_drvdata(pci, NULL);
 }
 
-
 // card interface
 
 static irqreturn_t snd_marian_interrupt(int irq, void *dev_id)

@@ -3,7 +3,8 @@
 /*
  *   ALSA driver for MARIAN Seraph audio interfaces
  *
- *   Copyright (c) 2012 Florian Faber <faberman@linuxproaudio.org>
+ *   Copyright (c) 2012 Florian Faber <faberman@linuxproaudio.org>,
+ *		   2023 Ivan Orlov <ivan.orlov0322@gmail.com>
  */
 
 #include <linux/version.h>

@@ -61,16 +61,38 @@
 #define STATUS_INT_PREP		BIT(14)
 
 #define PORTS_COUNT 23
+#define A3_CLOCK_SRC_CNT	5
 #define A3_CLOCK_SRC_DCO	1
 #define A3_CLOCK_SRC_SYNCBUS	2
 #define A3_CLOCK_SRC_ADAT1	4
 #define A3_CLOCK_SRC_ADAT2	5
 #define A3_CLOCK_SRC_ADAT3	6
+#define A3_INP1_FREQ_CTL_ID	4
+#define A3_INP2_FREQ_CTL_ID	5
+#define A3_INP3_FREQ_CTL_ID	6
 
+#define M2_CLOCK_SRC_CNT	4
 #define M2_CLOCK_SRC_DCO	1
 #define M2_CLOCK_SRC_SYNCBUS	2
 #define M2_CLOCK_SRC_MADI1	4
 #define M2_CLOCK_SRC_MADI2	5
+
+#define M2_SYNC_STATE_CNT	3
+#define M2_CHNL_MODE_CNT	2
+#define M2_FRAME_MODE_CNT	2
+
+#define M2_INP1_SYNC_CTL_ID	0
+#define M2_INP1_CM_CTL_ID	0
+#define M2_INP1_FM_CTL_ID	0
+#define M2_INP1_FREQ_CTL_ID	4
+#define M2_OUT1_CM_CTL_ID	0
+#define M2_OUT1_FM_CTL_ID	0
+#define M2_INP2_SYNC_CTL_ID	1
+#define M2_INP2_CM_CTL_ID	1
+#define M2_INP2_FM_CTL_ID	1
+#define M2_INP2_FREQ_CTL_ID	5
+#define M2_OUT2_CM_CTL_ID	1
+#define M2_OUT2_FM_CTL_ID	1
 
 // MADI FPGA register 0x40
 // Use internal (=0) or external PLL (=1)
@@ -96,6 +118,7 @@
 // Send 48kHz (=0) or 96kHz (=1) MADI frames
 #define M2_PORT2_FRAME 3
 
+#define S8_CLOCK_SRC_CNT	2
 #define S8_CLOCK_SRC_DCO	1
 #define S8_CLOCK_SRC_SYNCBUS	2
 
@@ -106,7 +129,7 @@ typedef void (*marian_hw_constraints_func)(struct marian_card *marian,
 					   struct snd_pcm_substream *substream,
 					   struct snd_pcm_hw_params *params);
 typedef void (*marian_controls_func)(struct marian_card *marian);
-typedef int (*marian_init_func)(struct marian_card *marian);
+typedef void (*marian_init_func)(struct marian_card *marian);
 typedef void (*marian_free_func)(struct marian_card *marian);
 typedef void (*marian_prepare_func)(struct marian_card *marian);
 typedef void (*marian_init_codec_func)(struct marian_card *marian);
@@ -208,21 +231,14 @@ struct m2_specific {
 	u8 frame;
 };
 
-static __always_inline void writel_and_log(u32 val, void *addr)
-{
-	snd_printdd(KERN_DEBUG "writel(%02x, %p) [%s:%u]\n",
-		    val, addr, __FILE__, __LINE__);
-	writel(val, addr);
-}
-
-int marian_generic_init(struct marian_card *marian);
+void marian_generic_init(struct marian_card *marian);
 void marian_proc_status_generic(struct marian_card *marian, struct snd_info_buffer *buffer);
 void marian_proc_ports_generic(struct marian_card *marian, struct snd_info_buffer *buffer,
 			       unsigned int type);
 unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source);
 int marian_generic_frequency_create(struct marian_card *marian, char *label, u32 idx);
 int marian_generic_speedmode_create(struct marian_card *marian);
-int marian_generic_dco_create(struct marian_card *marian);
+void marian_generic_dco_create(struct marian_card *marian);
 
 void marian_generic_set_speedmode(struct marian_card *marian, unsigned int speedmode);
 void marian_generic_set_clock_source(struct marian_card *marian, u8 source);
@@ -232,7 +248,7 @@ int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_w
 			u8 *data_write, uint16_t bits_read, u8 *data_read);
 
 void marian_a3_prepare(struct marian_card *marian);
-int marian_a3_init(struct marian_card *marian);
+void marian_a3_init(struct marian_card *marian);
 void marian_a3_proc_ports(struct marian_card *marian, struct snd_info_buffer *buffer,
 			  unsigned int type);
 void marian_a3_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer);
@@ -241,7 +257,7 @@ void marian_a3_create_controls(struct marian_card *marian);
 void marian_m2_constraints(struct marian_card *marian, struct snd_pcm_substream *substream,
 			   struct snd_pcm_hw_params *params);
 void marian_m2_create_controls(struct marian_card *marian);
-int marian_m2_init(struct marian_card *marian);
+void marian_m2_init(struct marian_card *marian);
 void marian_m2_free(struct marian_card *marian);
 void marian_m2_init_codec(struct marian_card *marian);
 void marian_m2_prepare(struct marian_card *marian);

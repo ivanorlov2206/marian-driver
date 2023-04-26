@@ -1,55 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include "marian.h"
 
-static u8 marian_m2_spi_read(struct marian_card *marian, u8 adr);
-static int marian_m2_spi_write(struct marian_card *marian, u8 adr, u8 val);
-static int marian_m2_sync_state_info(struct snd_kcontrol *kcontrol,
-				     struct snd_ctl_elem_info *uinfo);
-static int marian_m2_sync_state_get(struct snd_kcontrol *kcontrol,
-				    struct snd_ctl_elem_value *ucontrol);
-static int marian_m2_sync_state_create(struct marian_card *marian, char *label, u32 idx);
-static int marian_m2_channel_mode_info(struct snd_kcontrol *kcontrol,
-				       struct snd_ctl_elem_info *uinfo);
-static int marian_m2_input_channel_mode_get(struct snd_kcontrol *kcontrol,
-					    struct snd_ctl_elem_value *ucontrol);
-static int marian_m2_input_channel_mode_create(struct marian_card *marian,
-					       char *label, u32 idx);
-static int marian_m2_frame_mode_info(struct snd_kcontrol *kcontrol,
-				     struct snd_ctl_elem_info *uinfo);
-static int marian_m2_input_frame_mode_get(struct snd_kcontrol *kcontrol,
-					  struct snd_ctl_elem_value *ucontrol);
-static int marian_m2_input_frame_mode_create(struct marian_card *marian, char *label, u32 idx);
-static int marian_m2_output_channel_mode_get(struct snd_kcontrol *kcontrol,
-					     struct snd_ctl_elem_value *ucontrol);
-static int marian_m2_output_channel_mode_put(struct snd_kcontrol *kcontrol,
-					     struct snd_ctl_elem_value *ucontrol);
-
-static int marian_m2_output_channel_mode_create(struct marian_card *marian,
-						char *label, u32 idx);
-static int marian_m2_output_frame_mode_get(struct snd_kcontrol *kcontrol,
-					   struct snd_ctl_elem_value *ucontrol);
-static int marian_m2_output_frame_mode_put(struct snd_kcontrol *kcontrol,
-					   struct snd_ctl_elem_value *ucontrol);
-static int marian_m2_output_frame_mode_create(struct marian_card *marian,
-					      char *label, u32 idx);
-
-static void marian_m2_set_float(struct marian_card *marian, u8 state);
-static void marian_m2_set_endianness(struct marian_card *marian, u8 state);
-static void marian_m2_set_port_mode(struct marian_card *marian, unsigned int port, u8 state);
-static u8 marian_m2_get_port_mode(struct marian_card *marian, unsigned int port);
-static void marian_m2_write_port_frame(struct marian_card *marian);
-static void marian_m2_set_port_frame(struct marian_card *marian, unsigned int port, u8 state);
-
-// ALSA controls, RW
-
 static int marian_a3_clock_source_info(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_info *uinfo)
 {
 	static const char * const texts[] = { "Internal", "Sync Bus", "ADAT Input 1",
-				"ADAT Input 2", "ADAT Input 3" };
+			"ADAT Input 2", "ADAT Input 3" };
+
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
-	uinfo->value.enumerated.items = 5;
+	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
 		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
 	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
@@ -81,7 +41,7 @@ static int marian_a3_clock_source_get(struct snd_kcontrol *kcontrol,
 		dev_dbg(marian->card->dev,
 			"Illegal value for clock_source! (%d)\n",
 			marian->clock_source);
-		return -1;
+		return -EINVAL;
 	}
 
 	return 0;
@@ -93,19 +53,19 @@ static int marian_a3_clock_source_put(struct snd_kcontrol *kcontrol,
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	switch (ucontrol->value.enumerated.item[0]) {
-	case CLOCK_SRC_INTERNAL: // DCO
+	case CLOCK_SRC_INTERNAL:
 		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_DCO);
 		break;
-	case CLOCK_SRC_SYNCBUS: // Sync bus
+	case CLOCK_SRC_SYNCBUS:
 		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_SYNCBUS);
 		break;
-	case CLOCK_SRC_INP1: // ADAT input 1
+	case CLOCK_SRC_INP1:
 		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_ADAT1);
 		break;
-	case CLOCK_SRC_INP2: // ADAT input 2
+	case CLOCK_SRC_INP2:
 		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_ADAT2);
 		break;
-	case CLOCK_SRC_INP3: // ADAT input 3
+	case CLOCK_SRC_INP3:
 		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_ADAT3);
 		break;
 	}
@@ -113,11 +73,11 @@ static int marian_a3_clock_source_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int marian_a3_clock_source_create(struct marian_card *marian, char *label)
+static int marian_a3_clock_source_create(struct marian_card *marian)
 {
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
-		.name = label,
+		.name = "Clock Source",
 		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE | SNDRV_CTL_ELEM_ACCESS_VOLATILE,
 		.info = marian_a3_clock_source_info,
 		.get = marian_a3_clock_source_get,
@@ -127,30 +87,15 @@ static int marian_a3_clock_source_create(struct marian_card *marian, char *label
 	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
 }
 
-/*
- * Controls:
- *
- * RO:
- *   - Input 1 sync state (no signal, lock, sync)
- *   - Input 1 frequency
- *   - Input 2 sync state (no signal, lock, sync)
- *   - Input 2 frequency
- *   - Input 3 sync state (no signal, lock, sync)
- *   - Input 3 frequency
- *
- * RW:
- *   - Word clock source (Port 1, Port 2, Port 3, Internal, Sync port)
- *   - Speed mode (1, 2, 4FS)
- *   - DCO frequency (1 Hertz)
- *   - DCO frequency (1/1000th)
- */
-
 void marian_a3_create_controls(struct marian_card *marian)
 {
-	marian_generic_frequency_create(marian, "Input 1 Frequency", 4);
-	marian_generic_frequency_create(marian, "Input 2 Frequency", 5);
-	marian_generic_frequency_create(marian, "Input 3 Frequency", 6);
-	marian_a3_clock_source_create(marian, "Clock Source");
+	marian_generic_frequency_create(marian, "Input 1 Frequency",
+					A3_INP1_FREQ_CTL_ID);
+	marian_generic_frequency_create(marian, "Input 2 Frequency",
+					A3_INP2_FREQ_CTL_ID);
+	marian_generic_frequency_create(marian, "Input 3 Frequency",
+					A3_INP3_FREQ_CTL_ID);
+	marian_a3_clock_source_create(marian);
 	marian_generic_speedmode_create(marian);
 	marian_generic_dco_create(marian);
 }
@@ -160,26 +105,18 @@ void marian_a3_prepare(struct marian_card *marian)
 	u32 mask = 0x00FFFFFF;
 
 	// arm channels
-	writel_and_log(mask, marian->iobase + 0x08);
-	writel_and_log(mask, marian->iobase + 0x0C);
+	writel(mask, marian->iobase + 0x08);
+	writel(mask, marian->iobase + 0x0C);
 
 	// unmute inputs
-	writel_and_log(0x00, marian->iobase + 0x18);
+	writel(0x00, marian->iobase + 0x18);
 }
 
-int marian_a3_init(struct marian_card *marian)
+void marian_a3_init(struct marian_card *marian)
 {
-	int err;
-
-	err = marian_generic_init(marian);
-
-	if (err != 0)
-		return err;
-
+	marian_generic_init(marian);
 	// ADAT TX enable
-	writel_and_log(0x01, marian->iobase + 0x14);
-
-	return 0;
+	writel(0x01, marian->iobase + 0x14);
 }
 
 void marian_a3_proc_ports(struct marian_card *marian, struct snd_info_buffer *buffer,
@@ -259,15 +196,13 @@ static int marian_m2_spi_write(struct marian_card *marian, u8 adr, u8 val)
 	return marian_spi_transfer(marian, 0x02, 16, (u8 *)&buf_out, 0, NULL);
 }
 
-// RO controls
-
 static int marian_m2_sync_state_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
 {
 	static const char * const texts[] = { "No Signal", "Lock", "Sync" };
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
-	uinfo->value.enumerated.items = 3;
+	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
 		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
 	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
@@ -310,7 +245,7 @@ static int marian_m2_channel_mode_info(struct snd_kcontrol *kcontrol,
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
-	uinfo->value.enumerated.items = 2;
+	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
 		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
 	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
@@ -350,7 +285,7 @@ static int marian_m2_frame_mode_info(struct snd_kcontrol *kcontrol, struct snd_c
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
-	uinfo->value.enumerated.items = 2;
+	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
 		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
 	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
@@ -383,7 +318,15 @@ static int marian_m2_input_frame_mode_create(struct marian_card *marian, char *l
 	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
 }
 
-// RW controls
+static u8 marian_m2_get_port_mode(struct marian_card *marian, unsigned int port)
+{
+	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
+
+	if (port)
+		return (spec->shadow_42 >> M2_PORT2_MODE) & 1;
+	else
+		return (spec->shadow_42 >> M2_PORT1_MODE) & 1;
+}
 
 static int marian_m2_output_channel_mode_get(struct snd_kcontrol *kcontrol,
 					     struct snd_ctl_elem_value *ucontrol)
@@ -394,6 +337,20 @@ static int marian_m2_output_channel_mode_get(struct snd_kcontrol *kcontrol,
 								     kcontrol->private_value);
 
 	return 0;
+}
+
+static void marian_m2_set_port_mode(struct marian_card *marian, unsigned int port, u8 state)
+{
+	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
+
+	if (port)
+		spec->shadow_42 = (spec->shadow_42 & ~(1 << M2_PORT2_MODE))
+				| state << M2_PORT2_MODE;
+	else
+		spec->shadow_42 = (spec->shadow_42 & ~(1 << M2_PORT1_MODE))
+				| state << M2_PORT1_MODE;
+
+	marian_m2_spi_write(marian, 0x42, spec->shadow_42);
 }
 
 static int marian_m2_output_channel_mode_put(struct snd_kcontrol *kcontrol,
@@ -445,6 +402,32 @@ static int marian_m2_output_frame_mode_get(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static void marian_m2_write_port_frame(struct marian_card *marian)
+{
+	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
+
+	spec->shadow_42 = spec->shadow_42 & ~((1 << M2_PORT1_FRAME) | (1 << M2_PORT2_FRAME));
+
+	if (marian->speedmode == 2) {
+		// If we are in FS2, set 96kHz mode where enabled
+		if (spec->frame & 1)
+			spec->shadow_42 |= 1 << M2_PORT1_FRAME;
+		if (spec->frame & 2)
+			spec->shadow_42 |= 1 << M2_PORT2_FRAME;
+	}
+
+	marian_m2_spi_write(marian, 0x42, spec->shadow_42);
+}
+
+static void marian_m2_set_port_frame(struct marian_card *marian, unsigned int port, u8 state)
+{
+	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
+
+	spec->frame = (spec->frame & ~(1 << port)) | (state << port);
+
+	marian_m2_write_port_frame(marian);
+}
+
 static int marian_m2_output_frame_mode_put(struct snd_kcontrol *kcontrol,
 					   struct snd_ctl_elem_value *ucontrol)
 {
@@ -482,7 +465,7 @@ static int marian_m2_clock_source_info(struct snd_kcontrol *kcontrol,
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
-	uinfo->value.enumerated.items = 4;
+	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
 		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
 	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
@@ -511,7 +494,7 @@ static int marian_m2_clock_source_get(struct snd_kcontrol *kcontrol,
 		dev_dbg(marian->card->dev,
 			"Illegal value for clock_source! (%d)\n",
 			marian->clock_source);
-		return -1;
+		return -EINVAL;
 	}
 
 	return 0;
@@ -523,16 +506,16 @@ static int marian_m2_clock_source_put(struct snd_kcontrol *kcontrol,
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	switch (ucontrol->value.enumerated.item[0]) {
-	case CLOCK_SRC_INTERNAL: // DCO
+	case CLOCK_SRC_INTERNAL:
 		marian_generic_set_clock_source(marian, M2_CLOCK_SRC_DCO);
 		break;
-	case CLOCK_SRC_SYNCBUS: // Sync bus
+	case CLOCK_SRC_SYNCBUS:
 		marian_generic_set_clock_source(marian, M2_CLOCK_SRC_SYNCBUS);
 		break;
-	case CLOCK_SRC_INP1: // MADI port 1
+	case CLOCK_SRC_INP1:
 		marian_generic_set_clock_source(marian, M2_CLOCK_SRC_MADI1);
 		break;
-	case CLOCK_SRC_INP2: // MADI port 2
+	case CLOCK_SRC_INP2:
 		marian_generic_set_clock_source(marian, M2_CLOCK_SRC_MADI2);
 		break;
 	}
@@ -540,11 +523,11 @@ static int marian_m2_clock_source_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int marian_m2_clock_source_create(struct marian_card *marian, char *label)
+static int marian_m2_clock_source_create(struct marian_card *marian)
 {
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
-		.name = label,
+		.name = "Clock Source",
 		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE | SNDRV_CTL_ELEM_ACCESS_VOLATILE,
 		.info = marian_m2_clock_source_info,
 		.get = marian_m2_clock_source_get,
@@ -579,19 +562,29 @@ static int marian_m2_clock_source_create(struct marian_card *marian, char *label
  */
 void marian_m2_create_controls(struct marian_card *marian)
 {
-	marian_m2_sync_state_create(marian, "Input 1 Sync", 0);
-	marian_m2_sync_state_create(marian, "Input 2 Sync", 1);
-	marian_m2_input_channel_mode_create(marian, "Input 1 Channel Mode", 0);
-	marian_m2_input_channel_mode_create(marian, "Input 2 Channel Mode", 1);
-	marian_m2_input_frame_mode_create(marian, "Input 1 Frame Mode", 0);
-	marian_m2_input_frame_mode_create(marian, "Input 2 Frame Mode", 1);
-	marian_generic_frequency_create(marian, "Input 1 Frequency", 4);
-	marian_generic_frequency_create(marian, "Input 2 Frequency", 5);
-	marian_m2_output_channel_mode_create(marian, "Output 1 Channel Mode", 0);
-	marian_m2_output_channel_mode_create(marian, "Output 2 Channel Mode", 1);
-	marian_m2_output_frame_mode_create(marian, "Output 1 96kHz Frame", 0);
-	marian_m2_output_frame_mode_create(marian, "Output 2 96kHz Frame", 1);
-	marian_m2_clock_source_create(marian, "Clock Source");
+	marian_m2_sync_state_create(marian, "Input 1 Sync", M2_INP1_SYNC_CTL_ID);
+	marian_m2_sync_state_create(marian, "Input 2 Sync", M2_INP2_SYNC_CTL_ID);
+	marian_m2_input_channel_mode_create(marian, "Input 1 Channel Mode",
+					    M2_INP1_CM_CTL_ID);
+	marian_m2_input_channel_mode_create(marian, "Input 2 Channel Mode",
+					    M2_INP2_CM_CTL_ID);
+	marian_m2_input_frame_mode_create(marian, "Input 1 Frame Mode",
+					  M2_INP1_FM_CTL_ID);
+	marian_m2_input_frame_mode_create(marian, "Input 2 Frame Mode",
+					  M2_INP2_FM_CTL_ID);
+	marian_generic_frequency_create(marian, "Input 1 Frequency",
+					M2_INP1_FREQ_CTL_ID);
+	marian_generic_frequency_create(marian, "Input 2 Frequency",
+					M2_INP2_FREQ_CTL_ID);
+	marian_m2_output_channel_mode_create(marian, "Output 1 Channel Mode",
+					     M2_OUT1_CM_CTL_ID);
+	marian_m2_output_channel_mode_create(marian, "Output 2 Channel Mode",
+					     M2_OUT2_CM_CTL_ID);
+	marian_m2_output_frame_mode_create(marian, "Output 1 96kHz Frame",
+					   M2_OUT1_FM_CTL_ID);
+	marian_m2_output_frame_mode_create(marian, "Output 2 96kHz Frame",
+					   M2_OUT2_FM_CTL_ID);
+	marian_m2_clock_source_create(marian);
 	marian_generic_speedmode_create(marian);
 	marian_generic_dco_create(marian);
 }
@@ -614,77 +607,22 @@ static void marian_m2_set_endianness(struct marian_card *marian, u8 state)
 	marian_m2_spi_write(marian, 0x41, spec->shadow_41);
 }
 
-static void marian_m2_set_port_mode(struct marian_card *marian, unsigned int port, u8 state)
-{
-	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
-
-	if (port)
-		spec->shadow_42 = (spec->shadow_42 & ~(1 << M2_PORT2_MODE))
-				| state << M2_PORT2_MODE;
-	else
-		spec->shadow_42 = (spec->shadow_42 & ~(1 << M2_PORT1_MODE))
-				| state << M2_PORT1_MODE;
-
-	marian_m2_spi_write(marian, 0x42, spec->shadow_42);
-}
-
-static u8 marian_m2_get_port_mode(struct marian_card *marian, unsigned int port)
-{
-	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
-
-	if (port)
-		return (spec->shadow_42 >> M2_PORT2_MODE) & 1;
-	else
-		return (spec->shadow_42 >> M2_PORT1_MODE) & 1;
-}
-
-static void marian_m2_write_port_frame(struct marian_card *marian)
-{
-	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
-
-	spec->shadow_42 = spec->shadow_42 & ~((1 << M2_PORT1_FRAME) | (1 << M2_PORT2_FRAME));
-
-	if (marian->speedmode == 2) {
-		// If we are in FS2, set 96kHz mode where enabled
-		if (spec->frame & 1)
-			spec->shadow_42 |= 1 << M2_PORT1_FRAME;
-		if (spec->frame & 2)
-			spec->shadow_42 |= 1 << M2_PORT2_FRAME;
-	}
-
-	marian_m2_spi_write(marian, 0x42, spec->shadow_42);
-}
-
-static void marian_m2_set_port_frame(struct marian_card *marian, unsigned int port, u8 state)
-{
-	struct m2_specific *spec = (struct m2_specific *)marian->card_specific;
-
-	spec->frame = (spec->frame & ~(1 << port)) | (state << port);
-
-	marian_m2_write_port_frame(marian);
-}
-
 void marian_m2_set_speedmode(struct marian_card *marian, unsigned int speedmode)
 {
 	marian_generic_set_speedmode(marian, speedmode);
 	marian_m2_write_port_frame(marian);
 }
 
-int marian_m2_init(struct marian_card *marian)
+void marian_m2_init(struct marian_card *marian)
 {
-	int err;
 	struct m2_specific *spec;
 
-	err = marian_generic_init(marian);
-
-	if (err != 0)
-		return err;
-
+	marian_generic_init(marian);
 	spec = kzalloc(sizeof(*spec), GFP_KERNEL);
 	if (!spec) {
 		dev_dbg(marian->card->dev,
 			"Cannot allocate card specific structure\n");
-		return -ENOMEM;
+		return;
 	}
 
 	spec->shadow_40 = 0x00;
@@ -696,8 +634,6 @@ int marian_m2_init(struct marian_card *marian)
 	marian_m2_spi_write(marian, 0x42, spec->shadow_42);
 
 	marian->card_specific = spec;
-
-	return 0;
 }
 
 void marian_m2_free(struct marian_card *marian)
@@ -836,8 +772,6 @@ void marian_m2_constraints(struct marian_card *marian, struct snd_pcm_substream 
 	}
 }
 
-// ALSA controls, RW
-
 static int marian_seraph8_clock_source_info(struct snd_kcontrol *kcontrol,
 					    struct snd_ctl_elem_info *uinfo)
 {
@@ -845,7 +779,7 @@ static int marian_seraph8_clock_source_info(struct snd_kcontrol *kcontrol,
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
-	uinfo->value.enumerated.items = 2;
+	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
 		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
 	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
@@ -868,7 +802,7 @@ static int marian_seraph8_clock_source_get(struct snd_kcontrol *kcontrol,
 		dev_dbg(marian->card->dev,
 			"Illegal value for clock_source! (%d)\n",
 			marian->clock_source);
-		return -1;
+		return -EINVAL;
 	}
 
 	return 0;
@@ -880,10 +814,10 @@ static int marian_seraph8_clock_source_put(struct snd_kcontrol *kcontrol,
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	switch (ucontrol->value.enumerated.item[0]) {
-	case CLOCK_SRC_INTERNAL: // DCO
+	case CLOCK_SRC_INTERNAL:
 		marian_generic_set_clock_source(marian, S8_CLOCK_SRC_DCO);
 		break;
-	case CLOCK_SRC_SYNCBUS: // Sync bus
+	case CLOCK_SRC_SYNCBUS:
 		marian_generic_set_clock_source(marian, S8_CLOCK_SRC_SYNCBUS);
 		break;
 	}
@@ -891,11 +825,11 @@ static int marian_seraph8_clock_source_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int marian_seraph8_clock_source_create(struct marian_card *marian, char *label)
+static int marian_seraph8_clock_source_create(struct marian_card *marian)
 {
 	struct snd_kcontrol_new c = {
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
-		.name = label,
+		.name = "Clock Source",
 		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE | SNDRV_CTL_ELEM_ACCESS_VOLATILE,
 		.info = marian_seraph8_clock_source_info,
 		.get = marian_seraph8_clock_source_get,
@@ -907,7 +841,7 @@ static int marian_seraph8_clock_source_create(struct marian_card *marian, char *
 
 void marian_seraph8_create_controls(struct marian_card *marian)
 {
-	marian_seraph8_clock_source_create(marian, "Clock Source");
+	marian_seraph8_clock_source_create(marian);
 	marian_generic_speedmode_create(marian);
 	marian_generic_dco_create(marian);
 }
@@ -923,8 +857,8 @@ void marian_seraph8_prepare(struct marian_card *marian)
 
 	// arm channels
 
-	writel_and_log(mask, marian->iobase + 0x08);
-	writel_and_log(mask, marian->iobase + 0x0C);
+	writel(mask, marian->iobase + 0x08);
+	writel(mask, marian->iobase + 0x0C);
 }
 
 void marian_seraph8_init_codec(struct marian_card *marian)
@@ -932,16 +866,16 @@ void marian_seraph8_init_codec(struct marian_card *marian)
 	u8 buf_out[2];
 
 	// hold codecs reset line
-	writel_and_log(0x00, marian->iobase + 0x14);
+	writel(0x00, marian->iobase + 0x14);
 
 	// init codec clock divider (128FS)
-	writel_and_log(0x02, marian->iobase + 0x7C);
+	writel(0x02, marian->iobase + 0x7C);
 
 	// release codecs reset line
-	writel_and_log(0x01, marian->iobase + 0x14);
+	writel(0x01, marian->iobase + 0x14);
 
 	// enable all codecs
-	writel_and_log(0x0F, marian->iobase + 0x14);
+	writel(0x0F, marian->iobase + 0x14);
 
 	// initialize codecs via SPI
 
@@ -956,7 +890,7 @@ void marian_seraph8_init_codec(struct marian_card *marian)
 	marian_spi_transfer(marian, 0x1E, 16, (u8 *)&buf_out, 0, NULL);
 
 	// switch input mute off
-	writel_and_log(0x0, marian->iobase + 0x18);
+	writel(0x0, marian->iobase + 0x18);
 }
 
 void marian_seraph8_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)

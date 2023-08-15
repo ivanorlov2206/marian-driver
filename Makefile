@@ -1,5 +1,4 @@
-marianpci-y 	:= marian.o devices.o
-obj-m 		:= marianpci.o
+obj-m 		:= marian.o
 KERNELVER 	?= $(shell uname -r)
 KERNELDIR	?= /lib/modules/$(KERNELVER)/build
 

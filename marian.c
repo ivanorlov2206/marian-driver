@@ -6,9 +6,6 @@
  *		   2023 Ivan Orlov <ivan.orlov0322@gmail.com>
  */
 
-#ifndef __SOUND_MARIAN_H
-#define __SOUND_MARIAN_H
-
 #include <sound/core.h>
 #include <sound/control.h>
 #include <sound/pcm.h>
@@ -34,13 +31,7 @@
 #define SERAPH_WR_IE_ENABLE       0xAC
 
 #define PCI_VENDOR_ID_MARIAN            0x1382
-#define PCI_DEVICE_ID_MARIAN_SERAPH_A3  0x4630
-#define PCI_DEVICE_ID_MARIAN_C_BOX      0x4640
-#define PCI_DEVICE_ID_MARIAN_SERAPH_AD2 0x4720
-#define PCI_DEVICE_ID_MARIAN_SERAPH_D4  0x4840
-#define PCI_DEVICE_ID_MARIAN_SERAPH_D8  0x4880
-#define PCI_DEVICE_ID_MARIAN_SERAPH_8   0x4980
-#define PCI_DEVICE_ID_MARIAN_SERAPH_M2  0x5020
+#define PCI_DEVICE_ID_MARIAN_SERAPH_M2  0x5021
 
 #define RATE_SLOW	54000
 #define RATE_NORMAL	108000
@@ -67,17 +58,6 @@
 #define STATUS_INT_PREP		BIT(14)
 #define WCLOCK_NEW_VAL		BIT(31)
 #define SPI_ALL_READY		BIT(31)
-
-#define PORTS_COUNT 23
-#define A3_CLOCK_SRC_CNT	5
-#define A3_CLOCK_SRC_DCO	1
-#define A3_CLOCK_SRC_SYNCBUS	2
-#define A3_CLOCK_SRC_ADAT1	4
-#define A3_CLOCK_SRC_ADAT2	5
-#define A3_CLOCK_SRC_ADAT3	6
-#define A3_INP1_FREQ_CTL_ID	4
-#define A3_INP2_FREQ_CTL_ID	5
-#define A3_INP3_FREQ_CTL_ID	6
 
 #define M2_CLOCK_SRC_CNT	4
 #define M2_CLOCK_SRC_DCO	1
@@ -126,25 +106,8 @@
 // Send 48kHz (=0) or 96kHz (=1) MADI frames
 #define M2_PORT2_FRAME 3
 
-#define S8_CLOCK_SRC_CNT	2
-#define S8_CLOCK_SRC_DCO	1
-#define S8_CLOCK_SRC_SYNCBUS	2
-
 struct marian_card_descriptor;
 struct marian_card;
-
-typedef void (*marian_hw_constraints_func)(struct marian_card *marian,
-					   struct snd_pcm_substream *substream,
-					   struct snd_pcm_hw_params *params);
-typedef void (*marian_controls_func)(struct marian_card *marian);
-typedef int (*marian_init_func)(struct marian_card *marian);
-typedef void (*marian_free_func)(struct marian_card *marian);
-typedef void (*marian_prepare_func)(struct marian_card *marian);
-typedef void (*marian_init_codec_func)(struct marian_card *marian);
-typedef void (*marian_set_speedmode_func)(struct marian_card *marian, unsigned int speedmode);
-typedef void (*marian_proc_status_func)(struct marian_card *marian, struct snd_info_buffer *buffer);
-typedef void (*marian_proc_ports_func)(struct marian_card *marian, struct snd_info_buffer *buffer,
-					unsigned int type);
 
 struct marian_card_descriptor {
 	char *name;
@@ -162,18 +125,21 @@ struct marian_card_descriptor {
 
 	unsigned int dma_bufsize;
 
-	marian_hw_constraints_func hw_constraints_func;
+	void (*hw_constraints_func)(struct marian_card *marian,
+				    struct snd_pcm_substream *substream,
+				    struct snd_pcm_hw_params *params);
 	/* custom function to set up ALSA controls */
-	marian_controls_func create_controls;
+	void (*create_controls)(struct marian_card *marian);
 	/* init is called after probing the card */
-	marian_init_func init_card;
-	marian_free_func free_card;
+	int (*init_card)(struct marian_card *marian);
+	void (*free_card)(struct marian_card *marian);
 	/* prepare is called when ALSA is opening the card */
-	marian_prepare_func prepare;
-	marian_init_codec_func init_codec;
-	marian_set_speedmode_func set_speedmode;
-	marian_proc_status_func proc_status;
-	marian_proc_ports_func proc_ports;
+	void (*prepare)(struct marian_card *marian);
+	void (*init_codec)(struct marian_card *marian);
+	void (*set_speedmode)(struct marian_card *marian, unsigned int speedmode);
+	void (*proc_status)(struct marian_card *marian, struct snd_info_buffer *buffer);
+	void (*proc_ports)(struct marian_card *marian, struct snd_info_buffer *buffer,
+			   unsigned int type);
 
 	struct snd_pcm_hardware info_playback;
 	struct snd_pcm_hardware info_capture;
@@ -249,15 +215,7 @@ struct m2_specific {
 	u8 frame;
 };
 
-#endif
-
 static const struct pci_device_id snd_marian_ids[] = {
-	{PCI_DEVICE(PCI_VENDOR_ID_MARIAN, PCI_DEVICE_ID_MARIAN_SERAPH_A3), 0, 0, 0},
-	{PCI_DEVICE(PCI_VENDOR_ID_MARIAN, PCI_DEVICE_ID_MARIAN_C_BOX), 0, 0, 1},
-	{PCI_DEVICE(PCI_VENDOR_ID_MARIAN, PCI_DEVICE_ID_MARIAN_SERAPH_AD2), 0, 0, 2},
-	{PCI_DEVICE(PCI_VENDOR_ID_MARIAN, PCI_DEVICE_ID_MARIAN_SERAPH_D4), 0, 0, 3},
-	{PCI_DEVICE(PCI_VENDOR_ID_MARIAN, PCI_DEVICE_ID_MARIAN_SERAPH_D8), 0, 0, 4},
-	{PCI_DEVICE(PCI_VENDOR_ID_MARIAN, PCI_DEVICE_ID_MARIAN_SERAPH_8), 0, 0, 5},
 	{PCI_DEVICE(PCI_VENDOR_ID_MARIAN, PCI_DEVICE_ID_MARIAN_SERAPH_M2), 0, 0, 6},
 	{ }
 };
@@ -1191,180 +1149,6 @@ static int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t
 	return 0;
 }
 
-static int marian_a3_clock_source_info(struct snd_kcontrol *kcontrol,
-				       struct snd_ctl_elem_info *uinfo)
-{
-	static const char * const texts[] = { "Internal", "Sync Bus", "ADAT Input 1",
-			"ADAT Input 2", "ADAT Input 3" };
-
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
-	uinfo->count = 1;
-	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
-	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
-		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
-	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
-	return 0;
-}
-
-static int marian_a3_clock_source_get(struct snd_kcontrol *kcontrol,
-				      struct snd_ctl_elem_value *ucontrol)
-{
-	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-
-	switch (marian->clock_source) {
-	case A3_CLOCK_SRC_DCO:
-		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INTERNAL;
-		break;
-	case A3_CLOCK_SRC_SYNCBUS:
-		ucontrol->value.enumerated.item[0] = CLOCK_SRC_SYNCBUS;
-		break;
-	case A3_CLOCK_SRC_ADAT1:
-		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INP1;
-		break;
-	case A3_CLOCK_SRC_ADAT2:
-		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INP2;
-		break;
-	case A3_CLOCK_SRC_ADAT3:
-		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INP3;
-		break;
-	default:
-		dev_dbg(marian->card->dev,
-			"Illegal value for clock_source! (%d)\n",
-			marian->clock_source);
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int marian_a3_clock_source_put(struct snd_kcontrol *kcontrol,
-				      struct snd_ctl_elem_value *ucontrol)
-{
-	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-
-	switch (ucontrol->value.enumerated.item[0]) {
-	case CLOCK_SRC_INTERNAL:
-		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_DCO);
-		break;
-	case CLOCK_SRC_SYNCBUS:
-		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_SYNCBUS);
-		break;
-	case CLOCK_SRC_INP1:
-		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_ADAT1);
-		break;
-	case CLOCK_SRC_INP2:
-		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_ADAT2);
-		break;
-	case CLOCK_SRC_INP3:
-		marian_generic_set_clock_source(marian, A3_CLOCK_SRC_ADAT3);
-		break;
-	}
-
-	return 0;
-}
-
-static int marian_a3_clock_source_create(struct marian_card *marian)
-{
-	struct snd_kcontrol_new c = {
-		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
-		.name = "Clock Source",
-		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE | SNDRV_CTL_ELEM_ACCESS_VOLATILE,
-		.info = marian_a3_clock_source_info,
-		.get = marian_a3_clock_source_get,
-		.put = marian_a3_clock_source_put,
-	};
-
-	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
-}
-
-static void marian_a3_create_controls(struct marian_card *marian)
-{
-	marian_generic_frequency_create(marian, "Input 1 Frequency",
-					A3_INP1_FREQ_CTL_ID);
-	marian_generic_frequency_create(marian, "Input 2 Frequency",
-					A3_INP2_FREQ_CTL_ID);
-	marian_generic_frequency_create(marian, "Input 3 Frequency",
-					A3_INP3_FREQ_CTL_ID);
-	marian_a3_clock_source_create(marian);
-	marian_generic_speedmode_create(marian);
-	marian_generic_dco_create(marian);
-}
-
-static void marian_a3_prepare(struct marian_card *marian)
-{
-	u32 mask = 0x00FFFFFF;
-
-	// arm channels
-	writel(mask, marian->iobase + 0x08);
-	writel(mask, marian->iobase + 0x0C);
-
-	// unmute inputs
-	writel(0x00, marian->iobase + 0x18);
-}
-
-static int marian_a3_init(struct marian_card *marian)
-{
-	marian_generic_init(marian);
-	// ADAT TX enable
-	writel(0x01, marian->iobase + 0x14);
-	return 0;
-}
-
-static void marian_a3_proc_ports(struct marian_card *marian, struct snd_info_buffer *buffer,
-			  unsigned int type)
-{
-	int i;
-
-	for (i = 0; i <= PORTS_COUNT; i++)
-		snd_iprintf(buffer, "%d=ADAT p%dch%02d\n", i + 1, i / 8 + 1, i % 8 + 1);
-}
-
-static void marian_a3_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)
-{
-	u32 *buf;
-	unsigned int i;
-
-	marian_proc_status_generic(marian, buffer);
-
-	buf = (u32 *)marian->dmabuf.area;
-
-	snd_iprintf(buffer, "Clock source: ");
-	switch (marian->clock_source) {
-	case A3_CLOCK_SRC_DCO:
-		snd_iprintf(buffer, "Internal DCO\n");
-		break;
-	case A3_CLOCK_SRC_SYNCBUS:
-		snd_iprintf(buffer, "Sync bus\n");
-		break;
-	case A3_CLOCK_SRC_ADAT1:
-		snd_iprintf(buffer, "ADAT Input 1\n");
-		break;
-	case A3_CLOCK_SRC_ADAT2:
-		snd_iprintf(buffer, "ADAT Input 2\n");
-		break;
-	case A3_CLOCK_SRC_ADAT3:
-		snd_iprintf(buffer, "ADAT Input 3\n");
-		break;
-	default:
-		snd_iprintf(buffer, "UNKNOWN\n");
-		break;
-	}
-
-	for (i = 1; i <= 3; i++)
-		snd_iprintf(buffer, "ADAT port %u input: %u Hz\n",
-			    i, marian_measure_freq(marian, 3 + i));
-
-	for (i = 0; i < 512; i++) {
-		if (i % 64 == 0)
-			snd_iprintf(buffer, "\n%4dK:\t", i);
-		else if (i % 8 == 0)
-			snd_iprintf(buffer, " ");
-
-		snd_iprintf(buffer, (*buf > 0) ? "X" : "0");
-		buf += 256;
-	}
-}
-
 static u8 marian_m2_spi_read(struct marian_card *marian, u8 adr)
 {
 	u8 buf_in;
@@ -1940,261 +1724,7 @@ static void marian_m2_constraints(struct marian_card *marian, struct snd_pcm_sub
 	}
 }
 
-static int marian_seraph8_clock_source_info(struct snd_kcontrol *kcontrol,
-					    struct snd_ctl_elem_info *uinfo)
-{
-	static const char * const texts[] = { "Internal", "Sync Bus" };
-
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
-	uinfo->count = 1;
-	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
-	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
-		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
-	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
-	return 0;
-}
-
-static int marian_seraph8_clock_source_get(struct snd_kcontrol *kcontrol,
-					   struct snd_ctl_elem_value *ucontrol)
-{
-	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-
-	switch (marian->clock_source) {
-	case S8_CLOCK_SRC_DCO:
-		ucontrol->value.enumerated.item[0] = CLOCK_SRC_INTERNAL;
-		break;
-	case S8_CLOCK_SRC_SYNCBUS:
-		ucontrol->value.enumerated.item[0] = CLOCK_SRC_SYNCBUS;
-		break;
-	default:
-		dev_dbg(marian->card->dev,
-			"Illegal value for clock_source! (%d)\n",
-			marian->clock_source);
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int marian_seraph8_clock_source_put(struct snd_kcontrol *kcontrol,
-					   struct snd_ctl_elem_value *ucontrol)
-{
-	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-
-	switch (ucontrol->value.enumerated.item[0]) {
-	case CLOCK_SRC_INTERNAL:
-		marian_generic_set_clock_source(marian, S8_CLOCK_SRC_DCO);
-		break;
-	case CLOCK_SRC_SYNCBUS:
-		marian_generic_set_clock_source(marian, S8_CLOCK_SRC_SYNCBUS);
-		break;
-	}
-
-	return 0;
-}
-
-static int marian_seraph8_clock_source_create(struct marian_card *marian)
-{
-	struct snd_kcontrol_new c = {
-		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
-		.name = "Clock Source",
-		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE | SNDRV_CTL_ELEM_ACCESS_VOLATILE,
-		.info = marian_seraph8_clock_source_info,
-		.get = marian_seraph8_clock_source_get,
-		.put = marian_seraph8_clock_source_put,
-	};
-
-	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
-}
-
-static void marian_seraph8_create_controls(struct marian_card *marian)
-{
-	marian_seraph8_clock_source_create(marian);
-	marian_generic_speedmode_create(marian);
-	marian_generic_dco_create(marian);
-}
-
-static void marian_seraph8_prepare(struct marian_card *marian)
-{
-	/*
-	 * MARIAN-AH:
-	 * u32 mask = 0xFF000000;
-	 * Transfer enable Bits for all Analog Channels
-	 */
-	u32 mask = 0x000000FF;
-
-	// arm channels
-
-	writel(mask, marian->iobase + 0x08);
-	writel(mask, marian->iobase + 0x0C);
-}
-
-static void marian_seraph8_init_codec(struct marian_card *marian)
-{
-	u8 buf_out[2];
-
-	// hold codecs reset line
-	writel(0x00, marian->iobase + 0x14);
-
-	// init codec clock divider (128FS)
-	writel(0x02, marian->iobase + 0x7C);
-
-	// release codecs reset line
-	writel(0x01, marian->iobase + 0x14);
-
-	// enable all codecs
-	writel(0x0F, marian->iobase + 0x14);
-
-	// initialize codecs via SPI
-
-	buf_out[0] = 0xA1;
-	buf_out[1] = 0x03;
-
-	marian_spi_transfer(marian, 0x1E, 16, (u8 *)&buf_out, 0, NULL);
-
-	buf_out[0] = 0xA2;
-	buf_out[1] = 0x4D;
-
-	marian_spi_transfer(marian, 0x1E, 16, (u8 *)&buf_out, 0, NULL);
-
-	// switch input mute off
-	writel(0x0, marian->iobase + 0x18);
-}
-
-static void marian_seraph8_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)
-{
-	u32 *buf;
-	unsigned int i;
-
-	marian_proc_status_generic(marian, buffer);
-
-	buf = (u32 *)marian->dmabuf.area;
-
-	for (i = 0; i < 512; i++) {
-		if (i % 64 == 0)
-			snd_iprintf(buffer, "\n% 4dK:\t", i);
-		else if (i % 8 == 0)
-			snd_iprintf(buffer, " ");
-
-		snd_iprintf(buffer, (*buf > 0) ? "X" : "0");
-		buf += 256;
-	}
-}
-
 static struct marian_card_descriptor descriptors[7] = {
-	{
-		.name = "Seraph A3",
-		.speedmode_max = 2,
-		.ch_in = 24,
-		.ch_out = 24,
-		.dma_ch_offset = 32,
-		.dma_bufsize = 2 * 32 * 2 * 2048 * 4,
-		.create_controls = marian_a3_create_controls,
-		.prepare = marian_a3_prepare,
-		.init_card = marian_a3_init,
-		.proc_status = marian_a3_proc_status,
-		.proc_ports = marian_a3_proc_ports,
-		.info_playback = {
-			.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED
-				| SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
-			.formats = SNDRV_PCM_FMTBIT_S24_3LE,
-			.rates = SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100
-				| SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200
-				| SNDRV_PCM_RATE_96000,
-			.rate_min = 28000,
-			.rate_max = 113000,
-			.channels_min = 1,
-			.channels_max = 24,
-			.buffer_bytes_max = 2 * 24 * 2 * 4096 * 4,
-			.period_bytes_min = 16 * 4,
-			.period_bytes_max = 2048 * 4 * 24,
-			.periods_min = 2,
-			.periods_max = 2
-		},
-		.info_capture = {
-			.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED
-				| SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
-			.formats = SNDRV_PCM_FMTBIT_S24_3LE,
-			.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100
-				| SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200
-				| SNDRV_PCM_RATE_96000),
-			.rate_min = 28000,
-			.rate_max = 113000,
-			.channels_min = 1,
-			.channels_max = 24,
-			.buffer_bytes_max = 2 * 24 * 2 * 4096 * 4,
-			.period_bytes_min = 16 * 4,
-			.period_bytes_max = 2048 * 4 * 24,
-			.periods_min = 2,
-			.periods_max = 2
-		}
-	},
-	{
-		.name = "C-Box",
-		.speedmode_max = 4,
-	},
-	{
-		.name = "Seraph AD2",
-		.speedmode_max = 4,
-	},
-	{
-		.name = "Seraph D4",
-		.speedmode_max = 4,
-	},
-	{
-		.name = "Seraph D8",
-		.speedmode_max = 4,
-	},
-	{
-		.name = "Seraph 8",
-		.port_names = "1=Analogue 1\n2=Analogue 2\n3=Analogue 3\n4=Analogue 4\n"
-		"5=Analogue 5\n6=Analogue 6\n7=Analogue 7\n8=Analogue 8\n",
-		.speedmode_max = 4,
-		.ch_in = 8,
-		.ch_out = 8,
-		.dma_ch_offset = 32,
-		.dma_bufsize = 2 * 32 * 2 * 2048 * 4,
-		.create_controls = marian_seraph8_create_controls,
-		.prepare = marian_seraph8_prepare,
-		.init_codec = marian_seraph8_init_codec,
-		.proc_status = marian_seraph8_proc_status,
-		.info_playback = {
-			.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED
-				| SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
-			.formats = SNDRV_PCM_FMTBIT_S32_LE,
-			.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100
-				| SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200
-				| SNDRV_PCM_RATE_96000 | SNDRV_PCM_RATE_176400
-				| SNDRV_PCM_RATE_192000),
-			.rate_min = 28000,
-			.rate_max = 216000,
-			.channels_min = 1,
-			.channels_max = 8,
-			.buffer_bytes_max = 2 * 8 * 2 * 4096 * 4,
-			.period_bytes_min = 16 * 4,
-			.period_bytes_max = 2048 * 4 * 8,
-			.periods_min = 2,
-			.periods_max = 2
-		},
-		.info_capture = {
-			.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED
-				| SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
-			.formats = SNDRV_PCM_FMTBIT_S32_LE,
-			.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100
-				| SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200
-				| SNDRV_PCM_RATE_96000 | SNDRV_PCM_RATE_176400
-				| SNDRV_PCM_RATE_192000),
-			.rate_min = 28000,
-			.rate_max = 216000,
-			.channels_min = 1,
-			.channels_max = 8,
-			.buffer_bytes_max = 2 * 8 * 2 * 4096 * 4,
-			.period_bytes_min = 16 * 4,
-			.period_bytes_max = 2048 * 4 * 8,
-			.periods_min = 2,
-			.periods_max = 2
-		}
-	},
 	{
 		.name = "Seraph M2",
 		.speedmode_max = 2,

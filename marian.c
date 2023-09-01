@@ -14,7 +14,6 @@
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/core.h>
-#include <linux/debugfs.h>
 #include <sound/pcm.h>
 #include <sound/initval.h>
 #include <sound/info.h>
@@ -41,7 +40,7 @@
 #define PCI_DEVICE_ID_MARIAN_SERAPH_D4  0x4840
 #define PCI_DEVICE_ID_MARIAN_SERAPH_D8  0x4880
 #define PCI_DEVICE_ID_MARIAN_SERAPH_8   0x4980
-#define PCI_DEVICE_ID_MARIAN_SERAPH_M2  0x5021
+#define PCI_DEVICE_ID_MARIAN_SERAPH_M2  0x5020
 
 #define RATE_SLOW	54000
 #define RATE_NORMAL	108000
@@ -68,10 +67,6 @@
 #define STATUS_INT_PREP		BIT(14)
 #define WCLOCK_NEW_VAL		BIT(31)
 #define SPI_ALL_READY		BIT(31)
-
-#define ENABLE_IRQ	0
-#define DISABLE_IRQ	BIT(1) | BIT(2)
-#define ENABLE_LOOPBACK BIT(3)
 
 #define PORTS_COUNT 23
 #define A3_CLOCK_SRC_CNT	5
@@ -138,7 +133,18 @@
 struct marian_card_descriptor;
 struct marian_card;
 
-static bool is_loopback_enabled;
+typedef void (*marian_hw_constraints_func)(struct marian_card *marian,
+					   struct snd_pcm_substream *substream,
+					   struct snd_pcm_hw_params *params);
+typedef void (*marian_controls_func)(struct marian_card *marian);
+typedef int (*marian_init_func)(struct marian_card *marian);
+typedef void (*marian_free_func)(struct marian_card *marian);
+typedef void (*marian_prepare_func)(struct marian_card *marian);
+typedef void (*marian_init_codec_func)(struct marian_card *marian);
+typedef void (*marian_set_speedmode_func)(struct marian_card *marian, unsigned int speedmode);
+typedef void (*marian_proc_status_func)(struct marian_card *marian, struct snd_info_buffer *buffer);
+typedef void (*marian_proc_ports_func)(struct marian_card *marian, struct snd_info_buffer *buffer,
+					unsigned int type);
 
 struct marian_card_descriptor {
 	char *name;
@@ -156,21 +162,18 @@ struct marian_card_descriptor {
 
 	unsigned int dma_bufsize;
 
-	void (*hw_constraints_func)(struct marian_card *marian,
-				    struct snd_pcm_substream *substream,
-				    struct snd_pcm_hw_params *params);
+	marian_hw_constraints_func hw_constraints_func;
 	/* custom function to set up ALSA controls */
-	void (*create_controls)(struct marian_card *marian);
+	marian_controls_func create_controls;
 	/* init is called after probing the card */
-	int (*init_card)(struct marian_card *marian);
-	void (*free_card)(struct marian_card *marian);
+	marian_init_func init_card;
+	marian_free_func free_card;
 	/* prepare is called when ALSA is opening the card */
-	void (*prepare)(struct marian_card *marian);
-	void (*init_codec)(struct marian_card *marian);
-	void (*set_speedmode)(struct marian_card *marian, unsigned int speedmode);
-	void (*proc_status)(struct marian_card *marian, struct snd_info_buffer *buffer);
-	void (*proc_ports)(struct marian_card *marian, struct snd_info_buffer *buffer,
-			   unsigned int type);
+	marian_prepare_func prepare;
+	marian_init_codec_func init_codec;
+	marian_set_speedmode_func set_speedmode;
+	marian_proc_status_func proc_status;
+	marian_proc_ports_func proc_ports;
 
 	struct snd_pcm_hardware info_playback;
 	struct snd_pcm_hardware info_capture;
@@ -193,7 +196,7 @@ struct marian_card {
 
 	unsigned int idx;
 	/* card lock */
-	spinlock_t reg_lock;
+	spinlock_t lock;
 
 	unsigned int stream_open;
 	unsigned int period_size;
@@ -469,7 +472,7 @@ static void marian_generic_set_speedmode(struct marian_card *marian, unsigned in
 		break;
 	case SPEEDMODE_NORMAL:
 		writel(0x03, marian->iobase + 0x80);
-		writel(0x00, marian->iobase + 0x8C); // for 96kHz in 2FS mode
+		writel(0x01, marian->iobase + 0x8C); // for 96kHz in 2FS mode
 		marian->speedmode = SPEEDMODE_NORMAL;
 		break;
 	case SPEEDMODE_FAST:
@@ -487,7 +490,6 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
 	unsigned int speedmode;
-	unsigned int blocks_count;
 	int size;
 
 	dev_dbg(marian->card->dev,
@@ -553,14 +555,9 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 		writel((u32)marian->playback_substream->runtime->dma_addr,
 		       marian->iobase + SERAPH_WR_DMA_ADR);
 	}
-
-	// count of 16-sample-blocks must be even, so round the value down to even
-	blocks_count = (marian->period_size / 16) & ~1;
-
 	dev_dbg(marian->card->dev,
-		"  setting card's DMA block count to %d\n", blocks_count);
-
-	writel(blocks_count, marian->iobase + SERAPH_WR_DMA_BLOCKS);
+		"  setting card's DMA block count to %d\n", marian->period_size / 16);
+	writel(marian->period_size / 16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
 
 	// apply optional card specific hw constraints
 	if (marian->desc->hw_constraints_func)
@@ -572,8 +569,6 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 static int snd_marian_prepare(struct snd_pcm_substream *substream)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
-
-	spin_lock_irq(&marian->reg_lock);
 
 	dev_dbg(marian->card->dev, "  stream    : %s\n",
 		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture");
@@ -595,8 +590,6 @@ static int snd_marian_prepare(struct snd_pcm_substream *substream)
 	if (marian->desc->init_codec)
 		marian->desc->init_codec(marian);
 
-	spin_unlock_irq(&marian->reg_lock);
-
 	return 0;
 }
 
@@ -609,18 +602,17 @@ static int snd_marian_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
 
-	// This callback is atomic, so we don't need to disable IRQ
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		marian_silence(marian);
 		dev_dbg(marian->card->dev, "  enabling DMA transfers\n");
-		writel(0x03, marian->iobase + SERAPH_WR_DMA_ENABLE);
+		writel(0x3, marian->iobase + SERAPH_WR_DMA_ENABLE);
 		dev_dbg(marian->card->dev, "  enabling IRQ\n");
-		writel(ENABLE_IRQ | (is_loopback_enabled << 3), marian->iobase + SERAPH_WR_IE_ENABLE);
+		writel(0x2, marian->iobase + SERAPH_WR_IE_ENABLE);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 		dev_dbg(marian->card->dev, "  disabling IRQ\n");
-		writel(DISABLE_IRQ, marian->iobase + SERAPH_WR_IE_ENABLE);
+		writel(0x0, marian->iobase + SERAPH_WR_IE_ENABLE);
 		dev_dbg(marian->card->dev, "  disabling DMA transfers\n");
 		writel(0x0, marian->iobase + SERAPH_WR_DMA_ENABLE);
 		marian_silence(marian);
@@ -772,7 +764,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	marian->iobase = NULL;
 	marian->irq = -1;
 	marian->idx = idx;
-	spin_lock_init(&marian->reg_lock);
+	spin_lock_init(&marian->lock);
 
 	err = pci_enable_device(pci);
 	if (err < 0)
@@ -2257,13 +2249,6 @@ static struct marian_card_descriptor descriptors[7] = {
 	}
 };
 
-static void create_debugfs_entries(void)
-{
-	struct dentry *root = debugfs_create_dir("marian", NULL);
-
-	debugfs_create_bool("loopback", 0600, root, &is_loopback_enabled);
-}
-
 static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci_id)
 {
 	static unsigned int dev;
@@ -2272,8 +2257,6 @@ static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci
 
 	if (dev >= SNDRV_CARDS)
 		return -ENODEV;
-
-	create_debugfs_entries();
 
 	dev_dbg(&pci->dev, "[%04x:%04x, %lu]\n",
 		pci_id->vendor, pci_id->device, pci_id->driver_data);

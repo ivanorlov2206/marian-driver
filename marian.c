@@ -1724,62 +1724,60 @@ static void marian_m2_constraints(struct marian_card *marian, struct snd_pcm_sub
 	}
 }
 
-static struct marian_card_descriptor descriptors[7] = {
-	{
-		.name = "Seraph M2",
-		.speedmode_max = 2,
-		.ch_in = 128,
-		.ch_out = 128,
-		.dma_ch_offset = 128,
-		.dma_bufsize = 2 * 128 * 2 * 2048 * 4,
-		.hw_constraints_func = marian_m2_constraints,
-		.create_controls = marian_m2_create_controls,
-		.init_card = marian_m2_init,
-		.free_card = marian_m2_free,
-		.prepare = marian_m2_prepare,
-		.set_speedmode = marian_m2_set_speedmode,
-		.proc_status = marian_m2_proc_status,
-		.proc_ports = marian_m2_proc_ports,
-		.info_playback = {
-			.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED
-				| SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
-			.formats = SNDRV_PCM_FMTBIT_S32_LE | SNDRV_PCM_FMTBIT_S32_BE
-				| SNDRV_PCM_FMTBIT_FLOAT_LE | SNDRV_PCM_FMTBIT_FLOAT_BE,
-			.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100
-				| SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200
-				| SNDRV_PCM_RATE_96000),
-			.rate_min = 28000,
-			.rate_max = 113000,
-			.channels_min = 128,
-			.channels_max = 128,
-			.buffer_bytes_max = 2 * 128 * 2 * 1024 * 4,
-			.period_bytes_min = 16 * 4,
-			.period_bytes_max = 1024 * 4 * 128,
-			.periods_min = 2,
-			.periods_max = 2
-		},
-		.info_capture = {
-			.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED
-				| SNDRV_PCM_INFO_SYNC_START | SNDRV_PCM_INFO_JOINT_DUPLEX,
-			.formats = SNDRV_PCM_FMTBIT_S32_LE | SNDRV_PCM_FMTBIT_S32_BE
-				| SNDRV_PCM_FMTBIT_FLOAT_LE | SNDRV_PCM_FMTBIT_FLOAT_BE,
-			.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100
-				| SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200
-				| SNDRV_PCM_RATE_96000),
-			.rate_min = 28000,
-			.rate_max = 113000,
-			.channels_min = 128,
-			.channels_max = 128,
-			.buffer_bytes_max = 2 * 128 * 2 * 1024 * 4,
-			.period_bytes_min = 16 * 4,
-			.period_bytes_max = 1024 * 4 * 128,
-			.periods_min = 2,
-			.periods_max = 2
-		}
+static struct marian_card_descriptor descriptor = {
+	.name = "Seraph M2",
+	.speedmode_max = 2,
+	.ch_in = 128,
+	.ch_out = 128,
+	.dma_ch_offset = 128,
+	.dma_bufsize = 2 * 128 * 2 * 2048 * 4,
+	.hw_constraints_func = marian_m2_constraints,
+	.create_controls = marian_m2_create_controls,
+	.init_card = marian_m2_init,
+	.free_card = marian_m2_free,
+	.prepare = marian_m2_prepare,
+	.set_speedmode = marian_m2_set_speedmode,
+	.proc_status = marian_m2_proc_status,
+	.proc_ports = marian_m2_proc_ports,
+	.info_playback = {
+		.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED
+			| SNDRV_PCM_INFO_JOINT_DUPLEX | SNDRV_PCM_INFO_SYNC_START,
+		.formats = SNDRV_PCM_FMTBIT_S32_LE | SNDRV_PCM_FMTBIT_S32_BE
+			| SNDRV_PCM_FMTBIT_FLOAT_LE | SNDRV_PCM_FMTBIT_FLOAT_BE,
+		.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100
+			| SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200
+			| SNDRV_PCM_RATE_96000),
+		.rate_min = 28000,
+		.rate_max = 113000,
+		.channels_min = 128,
+		.channels_max = 128,
+		.buffer_bytes_max = 2 * 128 * 2 * 1024 * 4,
+		.period_bytes_min = 16 * 4,
+		.period_bytes_max = 1024 * 4 * 128,
+		.periods_min = 2,
+		.periods_max = 2
+	},
+	.info_capture = {
+		.info = SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_NONINTERLEAVED
+			| SNDRV_PCM_INFO_SYNC_START | SNDRV_PCM_INFO_JOINT_DUPLEX,
+		.formats = SNDRV_PCM_FMTBIT_S32_LE | SNDRV_PCM_FMTBIT_S32_BE
+			| SNDRV_PCM_FMTBIT_FLOAT_LE | SNDRV_PCM_FMTBIT_FLOAT_BE,
+		.rates = (SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100
+			| SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200
+			| SNDRV_PCM_RATE_96000),
+		.rate_min = 28000,
+		.rate_max = 113000,
+		.channels_min = 128,
+		.channels_max = 128,
+		.buffer_bytes_max = 2 * 128 * 2 * 1024 * 4,
+		.period_bytes_min = 16 * 4,
+		.period_bytes_max = 1024 * 4 * 128,
+		.periods_min = 2,
+		.periods_max = 2
 	}
 };
 
-static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci_id)
+static int snd_marian_m2_probe(struct pci_dev *pci, const struct pci_device_id *pci_id)
 {
 	static unsigned int dev;
 	struct snd_card *card;
@@ -1788,17 +1786,12 @@ static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci
 	if (dev >= SNDRV_CARDS)
 		return -ENODEV;
 
-	dev_dbg(&pci->dev, "[%04x:%04x, %lu]\n",
-		pci_id->vendor, pci_id->device, pci_id->driver_data);
-	dev_dbg(&pci->dev, "Found a %s, creating instance\n",
-		descriptors[pci_id->driver_data].name);
-
 	err = snd_card_new(&pci->dev, index[dev], id[dev],
 			   THIS_MODULE, sizeof(struct marian_card), &card);
 	if (err < 0)
 		return err;
 
-	err = snd_marian_create(card, pci, &descriptors[pci_id->driver_data], dev);
+	err = snd_marian_create(card, pci, &descriptor, dev);
 	if (err < 0) {
 		snd_card_free(card);
 		return err;
@@ -1811,7 +1804,7 @@ static int snd_marian_probe(struct pci_dev *pci, const struct pci_device_id *pci
 	return 0;
 }
 
-static void snd_marian_remove(struct pci_dev *pci)
+static void snd_marian_m2_remove(struct pci_dev *pci)
 {
 	snd_card_free(pci_get_drvdata(pci));
 	pci_set_drvdata(pci, NULL);
@@ -1820,8 +1813,8 @@ static void snd_marian_remove(struct pci_dev *pci)
 static struct pci_driver marian_driver = {
 	.name = "MARIAN",
 	.id_table = snd_marian_ids,
-	.probe = snd_marian_probe,
-	.remove = snd_marian_remove,
+	.probe = snd_marian_m2_probe,
+	.remove = snd_marian_m2_remove,
 };
 
 module_pci_driver(marian_driver);

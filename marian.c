@@ -19,6 +19,11 @@
 #include <linux/pci.h>
 #include <linux/interrupt.h>
 
+#define DEBUG
+
+#define SUBSTREAM_PERIOD_SIZE	(2 * 4 * 1024 * 128)
+#define SUBSTREAM_BUF_SIZE	(2 * SUBSTREAM_PERIOD_SIZE)
+
 #define SERAPH_RD_IRQ_STATUS      0x00
 #define SERAPH_RD_HWPOINTER       0x8C
 
@@ -27,6 +32,9 @@
 #define SERAPH_WR_ENABLE_PLAYBACK 0x0C
 #define SERAPH_WR_DMA_BLOCKS      0x10
 
+#define M2_DISABLE_PLAY_IRQ	BIT(1)
+#define M2_DISABLE_CAPT_IRQ	BIT(2)
+#define M2_ENABLE_LOOPBACK	BIT(3)
 #define SERAPH_WR_DMA_ENABLE      0x84
 #define SERAPH_WR_IE_ENABLE       0xAC
 
@@ -109,6 +117,8 @@
 struct marian_card_descriptor;
 struct marian_card;
 
+static bool loopback;
+
 struct marian_card_descriptor {
 	char *name;
 	char *port_names;
@@ -155,6 +165,10 @@ struct marian_card {
 	struct snd_pcm *pcm;
 	struct snd_dma_buffer dmabuf;
 
+	struct snd_dma_buffer playback_buf;
+	struct snd_dma_buffer capture_buf;
+
+
 	struct pci_dev *pci;
 	unsigned long port;
 	void __iomem *iobase;
@@ -165,7 +179,7 @@ struct marian_card {
 	spinlock_t lock;
 
 	unsigned int stream_open;
-	unsigned int period_size;
+	unsigned int buffer_size;
 
 	/* speed mode: 1, 2, 4 times FS */
 	unsigned int speedmode;
@@ -229,6 +243,9 @@ module_param_array(index, int, NULL, 0444);
 MODULE_PARM_DESC(index, "Index value for MARIAN PCI soundcard");
 module_param_array(id, charp, NULL, 0444);
 MODULE_PARM_DESC(id, "ID string for MARIAN PCI soundcard");
+
+module_param(loopback, bool, 0660);
+MODULE_PARM_DESC(loopback, "Enable hardware loopback");
 
 static void snd_marian_card_free(struct snd_card *card)
 {
@@ -457,9 +474,9 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 		params_rate(params),
 		params_buffer_size(params));
 
-	marian->period_size = params_buffer_size(params);
+	marian->buffer_size = params_buffer_size(params);
 	dev_dbg(marian->card->dev,
-		"period size: %d\n", marian->period_size);
+		"buffer size: %d\n", marian->buffer_size);
 
 	size = params_buffer_size(params) * params_channels(params) * 4;
 	dev_dbg(marian->card->dev,
@@ -488,7 +505,18 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 	marian->detune = 0;
 	marian_generic_set_dco(marian, params_rate(params), 0);
 
-	snd_pcm_set_runtime_buffer(substream, &marian->dmabuf);
+	marian->capture_buf = marian->dmabuf;
+	marian->capture_buf.bytes = size;
+
+	marian->playback_buf = marian->dmabuf;
+	marian->playback_buf.area += size;
+	marian->playback_buf.addr += size;
+	marian->playback_buf.bytes = size;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		snd_pcm_set_runtime_buffer(substream, &marian->playback_buf);
+	else
+		snd_pcm_set_runtime_buffer(substream, &marian->capture_buf);
 
 	dev_dbg(marian->card->dev, "  stream    : %s\n",
 		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture");
@@ -500,22 +528,15 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 		(unsigned long)substream->runtime->dma_bytes,
 		(int)substream->runtime->dma_bytes);
 
-	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-		dev_dbg(marian->card->dev, "  setting card's DMA ADR to %08x\n",
-			(unsigned int)marian->capture_substream->runtime->dma_addr);
-		// We really want the dma_addr to be in the 32 bits. DMA mask needs to be set.
-		writel((u32)marian->capture_substream->runtime->dma_addr,
-		       marian->iobase + SERAPH_WR_DMA_ADR); // TODO Set DMA mask
-	} else if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		dev_dbg(marian->card->dev, "  setting card's DMA ADR to %pad\n",
-			&marian->playback_substream->runtime->dma_addr);
-		// Same here: we need to set the DMA mask. Only then the conversion will be right
-		writel((u32)marian->playback_substream->runtime->dma_addr,
-		       marian->iobase + SERAPH_WR_DMA_ADR);
-	}
+	dev_dbg(marian->card->dev, "  setting card's DMA ADR to %08x\n",
+		(unsigned int)marian->dmabuf.addr);
+	// We really want the dma_addr to be in the 32 bits. DMA mask needs to be set.
+	writel((u32)marian->dmabuf.addr,
+	       marian->iobase + SERAPH_WR_DMA_ADR); // TODO Set DMA mask
+
 	dev_dbg(marian->card->dev,
-		"  setting card's DMA block count to %d\n", marian->period_size / 16);
-	writel(marian->period_size / 16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
+		"  setting card's DMA block count to %d\n", marian->buffer_size / 16);
+	writel(marian->buffer_size / 16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
 
 	// apply optional card specific hw constraints
 	if (marian->desc->hw_constraints_func)
@@ -566,11 +587,11 @@ static int snd_marian_trigger(struct snd_pcm_substream *substream, int cmd)
 		dev_dbg(marian->card->dev, "  enabling DMA transfers\n");
 		writel(0x3, marian->iobase + SERAPH_WR_DMA_ENABLE);
 		dev_dbg(marian->card->dev, "  enabling IRQ\n");
-		writel(0x2, marian->iobase + SERAPH_WR_IE_ENABLE);
+		writel(M2_ENABLE_LOOPBACK * loopback, marian->iobase + SERAPH_WR_IE_ENABLE);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 		dev_dbg(marian->card->dev, "  disabling IRQ\n");
-		writel(0x0, marian->iobase + SERAPH_WR_IE_ENABLE);
+		writel(M2_DISABLE_PLAY_IRQ | M2_DISABLE_CAPT_IRQ, marian->iobase + SERAPH_WR_IE_ENABLE);
 		dev_dbg(marian->card->dev, "  disabling DMA transfers\n");
 		writel(0x0, marian->iobase + SERAPH_WR_DMA_ENABLE);
 		marian_silence(marian);
@@ -599,37 +620,6 @@ static snd_pcm_uframes_t snd_marian_hw_pointer(struct snd_pcm_substream *substre
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
 
 	return readl(marian->iobase + SERAPH_RD_HWPOINTER);
-}
-
-/*
- * Capture and playback data lie one after another in the buffer.
- * The start position of the playback area and the length of each
- * channel's buffer depend directly on the period size.
- * We give ALSA the same dmabuf for playback and capture and set
- * each channel's buffer position using snd_pcm_channel_info->first.
- */
-static int marian_channel_info(struct snd_pcm_substream *substream,
-			       struct snd_pcm_channel_info *info)
-{
-	struct marian_card *marian = snd_pcm_substream_chip(substream);
-
-	info->offset = 0;
-	info->first = (((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? 1 : 0)
-		* marian->period_size * marian->desc->dma_ch_offset * 4
-		+ info->channel * marian->period_size * 4) * 8;
-	info->step = 32;
-
-	return 0;
-}
-
-static int snd_marian_ioctl(struct snd_pcm_substream *substream, unsigned int cmd, void *arg)
-{
-	switch (cmd) {
-	case SNDRV_PCM_IOCTL1_CHANNEL_INFO:
-		return marian_channel_info(substream, (struct snd_pcm_channel_info *)arg);
-	}
-
-	return snd_pcm_lib_ioctl(substream, cmd, arg);
 }
 
 static int snd_marian_mmap(struct snd_pcm_substream *substream, struct vm_area_struct *vma)
@@ -662,7 +652,6 @@ static const struct snd_pcm_ops snd_marian_playback_ops = {
 	.prepare = snd_marian_prepare,
 	.trigger = snd_marian_trigger,
 	.pointer = snd_marian_hw_pointer,
-	.ioctl = snd_marian_ioctl,
 	.mmap = snd_marian_mmap,
 };
 
@@ -673,7 +662,6 @@ static const struct snd_pcm_ops snd_marian_capture_ops = {
 	.prepare = snd_marian_prepare,
 	.trigger = snd_marian_trigger,
 	.pointer = snd_marian_hw_pointer,
-	.ioctl = snd_marian_ioctl,
 	.mmap = snd_marian_mmap,
 };
 
@@ -770,17 +758,12 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 
 	len = PAGE_ALIGN(desc->dma_bufsize);
 	dev_dbg(card->dev, "Allocating %d bytes DMA buffer\n", len);
-	err = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, &pci->dev,
+	err = snd_dma_alloc_pages(SNDRV_DMA_TYPE_CONTINUOUS, &pci->dev,
 				  desc->dma_bufsize, &marian->dmabuf);
 	if (err < 0) {
 		dev_err(card->dev, "Could not allocate %d Bytes (%d)\n", len, err);
-		while (snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, &pci->dev, len, &marian->dmabuf) < 0)
-			len--; // TODO Fix logical bug (what if we can't allocate any block?)
 
 		snd_dma_free_pages(&marian->dmabuf);
-		dev_err(card->dev,
-			"The maximum block of consecutive bytes is %d bytes long.\n", len);
-		dev_err(card->dev, "Please reboot to clean your page table.\n");
 		return err;
 	}
 
@@ -788,6 +771,16 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 		(unsigned long)marian->dmabuf.area); // TODO fix address conversions
 	dev_dbg(card->dev, "dmabuf.addr = 0x%lx\n", (unsigned long)marian->dmabuf.addr);
 	dev_dbg(card->dev, "dmabuf.bytes = %d\n", (int)marian->dmabuf.bytes);
+
+	/*size_t one_buf_size = marian->dmabuf.bytes / 2;
+
+	marian->capture_buf = marian->dmabuf;
+	marian->capture_buf.bytes = one_buf_size;
+
+	marian->playback_buf = marian->dmabuf;
+	marian->playback_buf.area += one_buf_size;
+	marian->playback_buf.addr += one_buf_size;
+	marian->playback_buf.bytes = one_buf_size;*/
 
 	if (!snd_card_proc_new(card, "status", &entry))
 		snd_info_set_text_ops(entry, marian, snd_marian_proc_status);
@@ -1751,9 +1744,9 @@ static struct marian_card_descriptor descriptor = {
 		.rate_max = 113000,
 		.channels_min = 128,
 		.channels_max = 128,
-		.buffer_bytes_max = 2 * 128 * 2 * 1024 * 4,
-		.period_bytes_min = 16 * 4,
-		.period_bytes_max = 1024 * 4 * 128,
+		.buffer_bytes_max = SUBSTREAM_BUF_SIZE,
+		.period_bytes_min = SUBSTREAM_PERIOD_SIZE,
+		.period_bytes_max = SUBSTREAM_PERIOD_SIZE,
 		.periods_min = 2,
 		.periods_max = 2
 	},
@@ -1769,9 +1762,9 @@ static struct marian_card_descriptor descriptor = {
 		.rate_max = 113000,
 		.channels_min = 128,
 		.channels_max = 128,
-		.buffer_bytes_max = 2 * 128 * 2 * 1024 * 4,
-		.period_bytes_min = 16 * 4,
-		.period_bytes_max = 1024 * 4 * 128,
+		.buffer_bytes_max = SUBSTREAM_BUF_SIZE,
+		.period_bytes_min = SUBSTREAM_PERIOD_SIZE,
+		.period_bytes_max = SUBSTREAM_PERIOD_SIZE,
 		.periods_min = 2,
 		.periods_max = 2
 	}

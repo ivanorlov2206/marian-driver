@@ -21,7 +21,8 @@
 
 #define DEBUG
 
-#define SUBSTREAM_PERIOD_SIZE	(2 * 4 * 1024 * 128)
+#define M2_FRAME_SIZE		(128 * 4)
+#define SUBSTREAM_PERIOD_SIZE	(2048 * M2_FRAME_SIZE)
 #define SUBSTREAM_BUF_SIZE	(2 * SUBSTREAM_PERIOD_SIZE)
 
 #define SERAPH_RD_IRQ_STATUS      0x00
@@ -145,7 +146,6 @@ struct marian_card_descriptor {
 	void (*free_card)(struct marian_card *marian);
 	/* prepare is called when ALSA is opening the card */
 	void (*prepare)(struct marian_card *marian);
-	void (*init_codec)(struct marian_card *marian);
 	void (*set_speedmode)(struct marian_card *marian, unsigned int speedmode);
 	void (*proc_status)(struct marian_card *marian, struct snd_info_buffer *buffer);
 	void (*proc_ports)(struct marian_card *marian, struct snd_info_buffer *buffer,
@@ -168,18 +168,17 @@ struct marian_card {
 	struct snd_dma_buffer playback_buf;
 	struct snd_dma_buffer capture_buf;
 
-
 	struct pci_dev *pci;
 	unsigned long port;
 	void __iomem *iobase;
 	int irq;
 
 	unsigned int idx;
-	/* card lock */
-	spinlock_t lock;
+	/* card locks */
+	spinlock_t reglock;
+	spinlock_t spilock;
 
 	unsigned int stream_open;
-	unsigned int buffer_size;
 
 	/* speed mode: 1, 2, 4 times FS */
 	unsigned int speedmode;
@@ -465,7 +464,7 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
 	unsigned int speedmode;
-	int size;
+	int buffer_frames;
 
 	dev_dbg(marian->card->dev,
 		"%d ch %s @ %dHz, buffer size %d\n",
@@ -474,13 +473,7 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 		params_rate(params),
 		params_buffer_size(params));
 
-	marian->buffer_size = params_buffer_size(params);
-	dev_dbg(marian->card->dev,
-		"buffer size: %d\n", marian->buffer_size);
-
-	size = params_buffer_size(params) * params_channels(params) * 4;
-	dev_dbg(marian->card->dev,
-		"period buf size: %d\n", size);
+	buffer_frames = SUBSTREAM_BUF_SIZE / M2_FRAME_SIZE;
 
 	if (params_rate(params) < RATE_SLOW)
 		speedmode = SPEEDMODE_SLOW;
@@ -497,21 +490,16 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 		return -EBUSY;
 	}
 
+	spin_lock(&marian->reglock);
 	if (marian->desc->set_speedmode)
 		marian->desc->set_speedmode(marian, speedmode);
 	else
 		marian_generic_set_speedmode(marian, speedmode);
 
 	marian->detune = 0;
+
 	marian_generic_set_dco(marian, params_rate(params), 0);
-
-	marian->capture_buf = marian->dmabuf;
-	marian->capture_buf.bytes = size;
-
-	marian->playback_buf = marian->dmabuf;
-	marian->playback_buf.area += size;
-	marian->playback_buf.addr += size;
-	marian->playback_buf.bytes = size;
+	spin_unlock(&marian->reglock);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		snd_pcm_set_runtime_buffer(substream, &marian->playback_buf);
@@ -530,13 +518,6 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 
 	dev_dbg(marian->card->dev, "  setting card's DMA ADR to %08x\n",
 		(unsigned int)marian->dmabuf.addr);
-	// We really want the dma_addr to be in the 32 bits. DMA mask needs to be set.
-	writel((u32)marian->dmabuf.addr,
-	       marian->iobase + SERAPH_WR_DMA_ADR); // TODO Set DMA mask
-
-	dev_dbg(marian->card->dev,
-		"  setting card's DMA block count to %d\n", marian->buffer_size / 16);
-	writel(marian->buffer_size / 16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
 
 	// apply optional card specific hw constraints
 	if (marian->desc->hw_constraints_func)
@@ -565,10 +546,6 @@ static int snd_marian_prepare(struct snd_pcm_substream *substream)
 	if (marian->desc->prepare)
 		marian->desc->prepare(marian);
 
-	// if there is card specific codec initialization, call it
-	if (marian->desc->init_codec)
-		marian->desc->init_codec(marian);
-
 	return 0;
 }
 
@@ -577,6 +554,7 @@ static void marian_silence(struct marian_card *marian)
 	memset(marian->dmabuf.area, 0, marian->dmabuf.bytes);
 }
 
+// atomic by default, no need for locking here
 static int snd_marian_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
@@ -587,11 +565,13 @@ static int snd_marian_trigger(struct snd_pcm_substream *substream, int cmd)
 		dev_dbg(marian->card->dev, "  enabling DMA transfers\n");
 		writel(0x3, marian->iobase + SERAPH_WR_DMA_ENABLE);
 		dev_dbg(marian->card->dev, "  enabling IRQ\n");
-		writel(M2_ENABLE_LOOPBACK * loopback, marian->iobase + SERAPH_WR_IE_ENABLE);
+		writel((M2_ENABLE_LOOPBACK * loopback) | M2_DISABLE_PLAY_IRQ,
+		       marian->iobase + SERAPH_WR_IE_ENABLE);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 		dev_dbg(marian->card->dev, "  disabling IRQ\n");
-		writel(M2_DISABLE_PLAY_IRQ | M2_DISABLE_CAPT_IRQ, marian->iobase + SERAPH_WR_IE_ENABLE);
+		writel(M2_DISABLE_PLAY_IRQ | M2_DISABLE_CAPT_IRQ,
+		       marian->iobase + SERAPH_WR_IE_ENABLE);
 		dev_dbg(marian->card->dev, "  disabling DMA transfers\n");
 		writel(0x0, marian->iobase + SERAPH_WR_DMA_ENABLE);
 		marian_silence(marian);
@@ -667,8 +647,10 @@ static const struct snd_pcm_ops snd_marian_capture_ops = {
 
 static void marian_generic_set_clock_source(struct marian_card *marian, u8 source)
 {
+	spin_lock(&marian->reglock);
 	writel(source, marian->iobase + 0x90);
 	marian->clock_source = source;
+	spin_unlock(&marian->reglock);
 }
 
 static void marian_generic_init(struct marian_card *marian)
@@ -682,8 +664,6 @@ static void marian_generic_init(struct marian_card *marian)
 	// disable play interrupt
 	writel(0x02, marian->iobase + 0xAC);
 
-	marian_generic_set_dco(marian, 48000, 0);
-
 	// init clock mode
 	marian_generic_set_speedmode(marian, SPEEDMODE_SLOW);
 
@@ -692,6 +672,20 @@ static void marian_generic_init(struct marian_card *marian)
 
 	// init SPI clock divider
 	writel(0x1F, marian->iobase + 0x74);
+}
+
+static void construct_playback_buffer(struct marian_card *marian)
+{
+	marian->playback_buf = marian->dmabuf;
+	marian->playback_buf.area += SUBSTREAM_BUF_SIZE;
+	marian->playback_buf.addr += SUBSTREAM_BUF_SIZE;
+	marian->playback_buf.bytes = SUBSTREAM_BUF_SIZE;
+}
+
+static void construct_capture_buffer(struct marian_card *marian)
+{
+	marian->capture_buf = marian->dmabuf;
+	marian->capture_buf.bytes = SUBSTREAM_BUF_SIZE;
 }
 
 static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
@@ -710,12 +704,18 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	marian->iobase = NULL;
 	marian->irq = -1;
 	marian->idx = idx;
-	spin_lock_init(&marian->lock);
+	spin_lock_init(&marian->reglock);
+	spin_lock_init(&marian->spilock);
 
 	err = pci_enable_device(pci);
 	if (err < 0)
 		return err;
-	// TODO set dma mask here
+
+	if (dma_set_mask_and_coherent(&pci->dev, DMA_BIT_MASK(32))) {
+		dev_err(&pci->dev, "Unable to set DMA mask\n");
+		return err;
+	}
+
 	pci_set_master(pci);
 
 	err = pci_request_regions(pci, "marian");
@@ -767,20 +767,14 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 		return err;
 	}
 
-	dev_dbg(card->dev, "dmabuf.area = 0x%lx\n",
-		(unsigned long)marian->dmabuf.area); // TODO fix address conversions
-	dev_dbg(card->dev, "dmabuf.addr = 0x%lx\n", (unsigned long)marian->dmabuf.addr);
-	dev_dbg(card->dev, "dmabuf.bytes = %d\n", (int)marian->dmabuf.bytes);
+	writel((u32)marian->dmabuf.addr,
+	       marian->iobase + SERAPH_WR_DMA_ADR);
 
-	/*size_t one_buf_size = marian->dmabuf.bytes / 2;
+	// Set 'block' count to buffer_frames/16 to set channel 'buffers' count (16 samples each)
+	writel(SUBSTREAM_BUF_SIZE / M2_FRAME_SIZE / 16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
 
-	marian->capture_buf = marian->dmabuf;
-	marian->capture_buf.bytes = one_buf_size;
-
-	marian->playback_buf = marian->dmabuf;
-	marian->playback_buf.area += one_buf_size;
-	marian->playback_buf.addr += one_buf_size;
-	marian->playback_buf.bytes = one_buf_size;*/
+	construct_capture_buffer(marian);
+	construct_playback_buffer(marian);
 
 	if (!snd_card_proc_new(card, "status", &entry))
 		snd_info_set_text_ops(entry, marian, snd_marian_proc_status);
@@ -812,6 +806,7 @@ static unsigned int marian_measure_freq(struct marian_card *marian, unsigned int
 	u32 val;
 	int tries = 5;
 
+	spin_lock(&marian->reglock);
 	writel(source & 0x7, marian->iobase + 0xC8);
 
 	while (tries > 0) {
@@ -819,9 +814,10 @@ static unsigned int marian_measure_freq(struct marian_card *marian, unsigned int
 		if (val & WCLOCK_NEW_VAL)
 			break;
 
-		msleep(1);
+		udelay(1000);
 		tries--;
 	}
+	spin_unlock(&marian->reglock);
 
 	if (tries > 0)
 		return (((1280000000 / ((val & 0x3FFFF) + 1)) + 5 * marian->speedmode)
@@ -894,7 +890,9 @@ static int marian_generic_dco_int_put(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
+	spin_lock(&marian->reglock);
 	marian_generic_set_dco(marian, ucontrol->value.integer.value[0], marian->dco_millis);
+	spin_unlock(&marian->reglock);
 
 	return 0;
 }
@@ -940,7 +938,9 @@ static int marian_generic_dco_millis_put(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
+	spin_lock(&marian->reglock);
 	marian_generic_set_dco(marian, marian->dco, ucontrol->value.integer.value[0]);
+	spin_unlock(&marian->reglock);
 
 	return 0;
 }
@@ -985,9 +985,11 @@ static int marian_generic_dco_detune_put(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
+	spin_lock(&marian->reglock);
 	marian->detune = ucontrol->value.integer.value[0];
 
 	marian_generic_set_dco(marian, marian->dco, marian->dco_millis);
+	spin_unlock(&marian->reglock);
 
 	return 0;
 }
@@ -1056,10 +1058,12 @@ static int marian_generic_speedmode_put(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
+	spin_lock(&marian->reglock);
 	if (ucontrol->value.enumerated.item[0] < 2)
 		marian->desc->set_speedmode(marian, ucontrol->value.enumerated.item[0] + 1);
 	else
 		marian->desc->set_speedmode(marian, SPEEDMODE_FAST);
+	spin_unlock(&marian->reglock);
 
 	return 0;
 }
@@ -1085,7 +1089,7 @@ static int spi_wait_for_ar(struct marian_card *marian)
 	while (tries > 0) {
 		if (readl(marian->iobase + 0x70) == SPI_ALL_READY)
 			break;
-		msleep(1);
+		udelay(1000);
 		tries--;
 	}
 	if (tries == 0)
@@ -1098,6 +1102,9 @@ static int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t
 {
 	u32 buf = 0;
 	unsigned int i;
+	int err = 0;
+
+	spin_lock(&marian->spilock);
 
 	dev_dbg(marian->card->dev,
 		"(.., 0x%04x, %u, [%02x, %02x], %u, ..)\n", cs, bits_write,
@@ -1124,7 +1131,8 @@ static int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t
 		if (spi_wait_for_ar(marian) < 0) {
 			dev_dbg(marian->card->dev,
 				"Bus didn't signal AR\n");
-			return -EIO;
+			err = -EIO;
+			goto unlock_exit;
 		}
 
 		buf = readl(marian->iobase + 0x74);
@@ -1139,7 +1147,9 @@ static int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t
 		}
 	}
 
-	return 0;
+unlock_exit:
+	spin_unlock(&marian->spilock);
+	return err;
 }
 
 static u8 marian_m2_spi_read(struct marian_card *marian, u8 adr)
@@ -1326,8 +1336,10 @@ static int marian_m2_output_channel_mode_put(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
+	spin_lock(&marian->reglock);
 	marian_m2_set_port_mode(marian, kcontrol->private_value,
 				ucontrol->value.enumerated.item[0]);
+	spin_unlock(&marian->reglock);
 
 	return 0;
 }
@@ -1404,8 +1416,10 @@ static int marian_m2_output_frame_mode_put(struct snd_kcontrol *kcontrol,
 	dev_dbg(marian->card->dev, "%lu -> %u\n",
 		kcontrol->private_value, ucontrol->value.enumerated.item[0]);
 
+	spin_lock(&marian->reglock);
 	marian_m2_set_port_frame(marian, kcontrol->private_value,
 				 ucontrol->value.enumerated.item[0]);
+	spin_unlock(&marian->reglock);
 
 	return 0;
 }
@@ -1612,6 +1626,7 @@ static void marian_m2_prepare(struct marian_card *marian)
 {
 	u32 mask = 0xFFFFFFFF;
 
+	spin_lock(&marian->reglock);
 	writel(mask, marian->iobase + 0x20);
 	writel(mask, marian->iobase + 0x24);
 	writel(mask, marian->iobase + 0x28);
@@ -1620,6 +1635,7 @@ static void marian_m2_prepare(struct marian_card *marian)
 	writel(mask, marian->iobase + 0x34);
 	writel(mask, marian->iobase + 0x38);
 	writel(mask, marian->iobase + 0x3C);
+	spin_unlock(&marian->reglock);
 }
 
 static void marian_m2_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)
@@ -1697,6 +1713,7 @@ static void marian_m2_proc_ports(struct marian_card *marian,
 static void marian_m2_constraints(struct marian_card *marian, struct snd_pcm_substream *substream,
 			   struct snd_pcm_hw_params *params)
 {
+	spin_lock(&marian->reglock);
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_FLOAT_BE:
 		marian_m2_set_float(marian, M2_NUM_MODE_FLOAT);
@@ -1715,6 +1732,7 @@ static void marian_m2_constraints(struct marian_card *marian, struct snd_pcm_sub
 		marian_m2_set_endianness(marian, M2_LE);
 		break;
 	}
+	spin_unlock(&marian->reglock);
 }
 
 static struct marian_card_descriptor descriptor = {
@@ -1723,7 +1741,7 @@ static struct marian_card_descriptor descriptor = {
 	.ch_in = 128,
 	.ch_out = 128,
 	.dma_ch_offset = 128,
-	.dma_bufsize = 2 * 128 * 2 * 2048 * 4,
+	.dma_bufsize = 2 * SUBSTREAM_BUF_SIZE,
 	.hw_constraints_func = marian_m2_constraints,
 	.create_controls = marian_m2_create_controls,
 	.init_card = marian_m2_init,

@@ -6,3 +6,5 @@
 *.order
 *.mod
 *.mod.c
+data/
+tests/data/

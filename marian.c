@@ -819,7 +819,7 @@ static unsigned int marian_measure_freq(struct marian_card *marian, unsigned int
 		if (val & WCLOCK_NEW_VAL)
 			break;
 
-		usleep_range(1000, 1000);
+		usleep_range(1000, 1200);
 		tries--;
 	}
 	spin_unlock(&marian->reglock);

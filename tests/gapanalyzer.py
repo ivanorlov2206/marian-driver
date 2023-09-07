@@ -13,6 +13,9 @@ while i < len(data):
 		i += len(nums)
 	i += 1
 s = -1
+if len(arr) == 0:
+	print("There is no numbers in the file :(");
+	exit(0)
 if arr[0] != 0:
 	arr = [0] + arr
 for i in range(1, len(arr)):

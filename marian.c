@@ -21,7 +21,9 @@
 
 #define DEBUG
 
-#define M2_FRAME_SIZE		(128 * 4)
+#define M2_CHANNELS_COUNT	128
+
+#define M2_FRAME_SIZE		(M2_CHANNELS_COUNT * 4)
 #define SUBSTREAM_PERIOD_SIZE	(2048 * M2_FRAME_SIZE)
 #define SUBSTREAM_BUF_SIZE	(2 * SUBSTREAM_PERIOD_SIZE)
 
@@ -126,7 +128,6 @@ struct marian_card_descriptor {
 	unsigned int speedmode_max;
 	unsigned int ch_in;
 	unsigned int ch_out;
-	unsigned int dma_ch_offset;
 	unsigned int midi_in;
 	unsigned int midi_out;
 	unsigned int serial_in;
@@ -174,9 +175,12 @@ struct marian_card {
 	int irq;
 
 	unsigned int idx;
-	/* card locks */
+
+	/* hardware registers lock */
 	spinlock_t reglock;
-	spinlock_t spilock;
+
+	/* spinlock for SPI communication */
+	spinlock_t spi_lock;
 
 	unsigned int stream_open;
 
@@ -309,7 +313,7 @@ static void snd_marian_proc_status(struct snd_info_entry  *entry, struct snd_inf
  * speed mode and whether input or output ports are requested.
  */
 static void marian_proc_ports_generic(struct marian_card *marian, struct snd_info_buffer *buffer,
-			       unsigned int type)
+				      unsigned int type)
 {
 	snd_iprintf(buffer, marian->desc->port_names);
 }
@@ -400,7 +404,8 @@ static int snd_marian_playback_release(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static void marian_generic_set_dco(struct marian_card *marian, unsigned int freq, unsigned int millis)
+static void marian_generic_set_dco(struct marian_card *marian, unsigned int freq,
+				   unsigned int millis)
 {
 	u64 val, v2;
 	s64 detune;
@@ -705,7 +710,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	marian->irq = -1;
 	marian->idx = idx;
 	spin_lock_init(&marian->reglock);
-	spin_lock_init(&marian->spilock);
+	spin_lock_init(&marian->spi_lock);
 
 	err = pci_enable_device(pci);
 	if (err < 0)
@@ -742,8 +747,8 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 
 	card->private_free = snd_marian_card_free;
 
-	strcpy(card->driver, "MARIAN FPGA");
-	strcpy(card->shortname, marian->desc->name);
+	strscpy(card->driver, "MARIAN FPGA", sizeof(card->driver));
+	strscpy(card->shortname, marian->desc->name, sizeof(card->shortname));
 	sprintf(card->longname, "%s PCIe audio at 0x%lx, irq %d",
 		card->shortname, marian->port, marian->irq);
 
@@ -814,7 +819,7 @@ static unsigned int marian_measure_freq(struct marian_card *marian, unsigned int
 		if (val & WCLOCK_NEW_VAL)
 			break;
 
-		udelay(1000);
+		usleep_range(1000, 1000);
 		tries--;
 	}
 	spin_unlock(&marian->reglock);
@@ -1036,7 +1041,8 @@ static int marian_generic_speedmode_info(struct snd_kcontrol *kcontrol,
 	}
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
 		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
-	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
+	strscpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item],
+		sizeof(uinfo->value.enumerated.name));
 	return 0;
 }
 
@@ -1089,7 +1095,7 @@ static int spi_wait_for_ar(struct marian_card *marian)
 	while (tries > 0) {
 		if (readl(marian->iobase + 0x70) == SPI_ALL_READY)
 			break;
-		udelay(1000);
+		udelay(100);
 		tries--;
 	}
 	if (tries == 0)
@@ -1098,13 +1104,13 @@ static int spi_wait_for_ar(struct marian_card *marian)
 }
 
 static int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t bits_write,
-			u8 *data_write, uint16_t bits_read, u8 *data_read)
+			       u8 *data_write, uint16_t bits_read, u8 *data_read)
 {
 	u32 buf = 0;
 	unsigned int i;
 	int err = 0;
 
-	spin_lock(&marian->spilock);
+	spin_lock(&marian->spi_lock);
 
 	dev_dbg(marian->card->dev,
 		"(.., 0x%04x, %u, [%02x, %02x], %u, ..)\n", cs, bits_write,
@@ -1148,7 +1154,7 @@ static int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t
 	}
 
 unlock_exit:
-	spin_unlock(&marian->spilock);
+	spin_unlock(&marian->spi_lock);
 	return err;
 }
 
@@ -1183,7 +1189,8 @@ static int marian_m2_sync_state_info(struct snd_kcontrol *kcontrol, struct snd_c
 	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
 		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
-	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
+	strscpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item],
+		sizeof(uinfo->value.enumerated.name));
 	return 0;
 }
 
@@ -1226,7 +1233,8 @@ static int marian_m2_channel_mode_info(struct snd_kcontrol *kcontrol,
 	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
 		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
-	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
+	strscpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item],
+		sizeof(uinfo->value.enumerated.name));
 	return 0;
 }
 
@@ -1266,7 +1274,8 @@ static int marian_m2_frame_mode_info(struct snd_kcontrol *kcontrol, struct snd_c
 	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
 		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
-	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
+	strscpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item],
+		sizeof(uinfo->value.enumerated.name));
 	return 0;
 }
 
@@ -1450,7 +1459,8 @@ static int marian_m2_clock_source_info(struct snd_kcontrol *kcontrol,
 	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
 		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
-	strcpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item]);
+	strscpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item],
+		sizeof(uinfo->value.enumerated.name));
 	return 0;
 }
 
@@ -1702,16 +1712,16 @@ static void marian_m2_proc_status(struct marian_card *marian, struct snd_info_bu
 }
 
 static void marian_m2_proc_ports(struct marian_card *marian,
-			  struct snd_info_buffer *buffer, unsigned int type)
+				 struct snd_info_buffer *buffer, unsigned int type)
 {
 	int i;
 
-	for (i = 0; i < 128; i++)
+	for (i = 0; i < M2_CHANNELS_COUNT; i++)
 		snd_iprintf(buffer, "%d=MADI p%dch%02d\n", i + 1, i / 64 + 1, i % 64 + 1);
 }
 
 static void marian_m2_constraints(struct marian_card *marian, struct snd_pcm_substream *substream,
-			   struct snd_pcm_hw_params *params)
+				  struct snd_pcm_hw_params *params)
 {
 	spin_lock(&marian->reglock);
 	switch (params_format(params)) {
@@ -1738,9 +1748,8 @@ static void marian_m2_constraints(struct marian_card *marian, struct snd_pcm_sub
 static struct marian_card_descriptor descriptor = {
 	.name = "Seraph M2",
 	.speedmode_max = 2,
-	.ch_in = 128,
-	.ch_out = 128,
-	.dma_ch_offset = 128,
+	.ch_in = M2_CHANNELS_COUNT,
+	.ch_out = M2_CHANNELS_COUNT,
 	.dma_bufsize = 2 * SUBSTREAM_BUF_SIZE,
 	.hw_constraints_func = marian_m2_constraints,
 	.create_controls = marian_m2_create_controls,
@@ -1760,8 +1769,8 @@ static struct marian_card_descriptor descriptor = {
 			| SNDRV_PCM_RATE_96000),
 		.rate_min = 28000,
 		.rate_max = 113000,
-		.channels_min = 128,
-		.channels_max = 128,
+		.channels_min = M2_CHANNELS_COUNT,
+		.channels_max = M2_CHANNELS_COUNT,
 		.buffer_bytes_max = SUBSTREAM_BUF_SIZE,
 		.period_bytes_min = SUBSTREAM_PERIOD_SIZE,
 		.period_bytes_max = SUBSTREAM_PERIOD_SIZE,
@@ -1778,8 +1787,8 @@ static struct marian_card_descriptor descriptor = {
 			| SNDRV_PCM_RATE_96000),
 		.rate_min = 28000,
 		.rate_max = 113000,
-		.channels_min = 128,
-		.channels_max = 128,
+		.channels_min = M2_CHANNELS_COUNT,
+		.channels_max = M2_CHANNELS_COUNT,
 		.buffer_bytes_max = SUBSTREAM_BUF_SIZE,
 		.period_bytes_min = SUBSTREAM_PERIOD_SIZE,
 		.period_bytes_max = SUBSTREAM_PERIOD_SIZE,

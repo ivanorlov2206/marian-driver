@@ -21,6 +21,8 @@
 
 #define M2_CHANNELS_COUNT	128
 
+#define M2_SPEEDMODE		2
+
 #define M2_FRAME_SIZE		(M2_CHANNELS_COUNT * 4)
 #define SUBSTREAM_PERIOD_SIZE	(2048 * M2_FRAME_SIZE)
 #define SUBSTREAM_BUF_SIZE	(2 * SUBSTREAM_PERIOD_SIZE)
@@ -72,6 +74,10 @@
 #define M2_INP2_FREQ_CTL_ID	5
 #define M2_OUT2_CM_CTL_ID	1
 #define M2_OUT2_FM_CTL_ID	1
+
+#define M2_SPI_STATE		0x70
+#define M2_SPI_RESET		0x70
+#define M2_SPI_CHIP_SELECT	0x60
 
 // MADI FPGA register 0x41
 // Enable both MADI transmitters (=1)
@@ -128,9 +134,6 @@ struct marian_card {
 
 	unsigned int stream_open;
 
-	/* speed mode: 1, 2, 4 times FS */
-	unsigned int speedmode;
-
 	/* 0..15, meaning depending on the card type */
 	unsigned int clock_source;
 
@@ -139,18 +142,22 @@ struct marian_card {
 	/* [0..1) part of the internal oscillator frequency (milli Hertz) */
 	unsigned int dco_millis;
 
-	/* [-200 .. 200] Two semitone 'musical' adjustment */
-	int detune;
-
 	/* WCK input termination on (1)/off (0) */
 	unsigned int wck_term;
 
 	/* WCK output source */
 	unsigned int wck_output;
 
+	/* Clock settings mask */
 	u8 shadow_40;
+
+	/* TX enable/disable mask */
 	u8 shadow_41;
+
+	/* Port mode mask */
 	u8 shadow_42;
+
+	/* Frame mode mask */
 	u8 frame;
 };
 
@@ -192,7 +199,7 @@ static int spi_wait_for_ar(struct marian_card *marian)
 	int tries = 10;
 
 	while (tries > 0) {
-		if (ioread32(marian->iobase + 0x70) == SPI_ALL_READY)
+		if (ioread32(marian->iobase + M2_SPI_STATE) == SPI_ALL_READY)
 			break;
 		udelay(100);
 		tries--;
@@ -212,13 +219,12 @@ static int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t
 	spin_lock(&marian->spi_lock);
 
 	if (spi_wait_for_ar(marian) < 0) {
-		pr_info("Resetting SPI bus...\n");
-		writel(0x1234, marian->iobase + 0x70); // Resetting SPI bus
+		iowrite32(0x1234, marian->iobase + M2_SPI_RESET); // Resetting SPI bus
 	}
 
-	writel(cs, marian->iobase + 0x60);         // chip select register
-	writel(bits_write, marian->iobase + 0x64); // number of bits to write
-	writel(bits_read, marian->iobase + 0x68);  // number of bits to read
+	iowrite32(cs, marian->iobase + 0x60);
+	iowrite32(bits_write, marian->iobase + 0x64); // number of bits to write
+	iowrite32(bits_read, marian->iobase + 0x68);  // number of bits to read
 
 	if (bits_write <= 32) {
 		if (bits_write <= 8)
@@ -226,7 +232,7 @@ static int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t
 		else if (bits_write <= 16)
 			buf = data_write[0] << 24 | data_write[1] << (32 - bits_write);
 
-		writel(buf, marian->iobase + 0x6C); // write data left aligned
+		iowrite32(buf, marian->iobase + 0x6C); // write data left aligned
 	}
 	if (bits_read > 0 && bits_read <= 32) {
 		if (spi_wait_for_ar(marian) < 0) {
@@ -284,26 +290,28 @@ static int marian_m2_spi_write(struct marian_card *marian, u8 adr, u8 val)
  */
 static unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source)
 {
-	mutex_lock(&marian->freq_mutex);
 	u32 val;
 	int tries = 5;
 
-	writel(source & 0x7, marian->iobase + 0xC8);
+	mutex_lock(&marian->freq_mutex);
+	iowrite32(source, marian->iobase + 0xC8);
+
+	mdelay(2);
 
 	while (tries > 0) {
 		val = ioread32(marian->iobase + 0x94);
 		if (val & WCLOCK_NEW_VAL)
 			break;
 
-		usleep_range(1000, 1200);
+		mdelay(1);
 		tries--;
 	}
 
 	mutex_unlock(&marian->freq_mutex);
 
 	if (tries > 0)
-		return (((1280000000 / ((val & 0x3FFFF) + 1)) + 5 * marian->speedmode)
-		/ (10 * marian->speedmode)) * 10 * marian->speedmode;
+		return (((1280000000 / ((val & 0x3FFFF) + 1)) + 5 * M2_SPEEDMODE)
+		/ (10 * M2_SPEEDMODE)) * 10;
 
 	return 0;
 }
@@ -345,21 +353,12 @@ static int marian_generic_frequency_create(struct marian_card *marian, char *lab
 static void marian_generic_set_dco(struct marian_card *marian, unsigned int freq)
 {
 	u64 val;
-	//s64 detune;
 
 	val = freq;
-	val /= 8;
 	val <<= 36;
-	val /= 10000000;
+	val /= 80000000;
 
-	/*if (marian->detune != 0) {
-		detune = marian->detune * 100;
-		v2 = val;
-		div_u64(v2, 138564);
-		detune *= v2;
-		val += detune;
-	} */
-	writel((u32)val, marian->iobase + 0x88);
+	iowrite32((u32)val, marian->iobase + 0x88);
 
 	marian->dco = freq;
 }
@@ -367,14 +366,10 @@ static void marian_generic_set_dco(struct marian_card *marian, unsigned int freq
 static int marian_generic_dco_int_info(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_info *uinfo)
 {
-	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->count = 1;
-	if (marian->speedmode == SPEEDMODE_SLOW) {
-		uinfo->value.integer.min = 32000;
-		uinfo->value.integer.max = 54000;
-	}
+	uinfo->value.integer.min = 28000;
+	uinfo->value.integer.max = 108000;
 	uinfo->value.integer.step = 1;
 	return 0;
 }
@@ -463,55 +458,6 @@ static int marian_generic_dco_millis_create(struct marian_card *marian, char *la
 	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
 }
 
-static int marian_generic_dco_detune_info(struct snd_kcontrol *kcontrol,
-					  struct snd_ctl_elem_info *uinfo)
-{
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-	uinfo->count = 1;
-	uinfo->value.integer.min = -200;
-	uinfo->value.integer.max = 200;
-	uinfo->value.integer.step = 1;
-	return 0;
-}
-
-static int marian_generic_dco_detune_get(struct snd_kcontrol *kcontrol,
-					 struct snd_ctl_elem_value *ucontrol)
-{
-	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-
-	ucontrol->value.integer.value[0] = marian->detune;
-
-	return 0;
-}
-
-static int marian_generic_dco_detune_put(struct snd_kcontrol *kcontrol,
-					 struct snd_ctl_elem_value *ucontrol)
-{
-	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-
-	spin_lock(&marian->reglock);
-	marian->detune = ucontrol->value.integer.value[0];
-
-	marian_generic_set_dco(marian, marian->dco);
-	spin_unlock(&marian->reglock);
-
-	return 0;
-}
-
-static int marian_generic_dco_detune_create(struct marian_card *marian, char *label)
-{
-	struct snd_kcontrol_new c = {
-		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
-		.name = label,
-		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE | SNDRV_CTL_ELEM_ACCESS_VOLATILE,
-		.info = marian_generic_dco_detune_info,
-		.get = marian_generic_dco_detune_get,
-		.put = marian_generic_dco_detune_put
-	};
-
-	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
-}
-
 static int marian_control_pcm_loopback_info(struct snd_kcontrol *kcontrol,
 					    struct snd_ctl_elem_info *uinfo)
 {
@@ -542,6 +488,7 @@ static int marian_control_pcm_loopback_put(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
+
 static int marian_control_pcm_loopback_create(struct marian_card *marian)
 {
 	struct snd_kcontrol_new c = {
@@ -554,13 +501,6 @@ static int marian_control_pcm_loopback_create(struct marian_card *marian)
 	};
 
 	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
-}
-
-static void marian_generic_dco_create(struct marian_card *marian)
-{
-	marian_generic_dco_int_create(marian, "DCO Freq (Hz)");
-	marian_generic_dco_millis_create(marian, "DCO Freq (millis)");
-	marian_generic_dco_detune_create(marian, "DCO Detune (cent)");
 }
 
 static void marian_m2_write_port_frame(struct marian_card *marian)
@@ -577,14 +517,15 @@ static void marian_m2_write_port_frame(struct marian_card *marian)
 
 static void marian_generic_set_speedmode(struct marian_card *marian, unsigned int rate)
 {
-	writel(0x02, marian->iobase + 0x80);
+	iowrite32(0x02, marian->iobase + 0x80);
 
-        if (rate <= 41000)
-                writel(0x02, marian->iobase + 0x8C);
-        else if (rate <= 82000)
-                writel(0x01, marian->iobase + 0x8C);
-        else
-                writel(0x00, marian->iobase + 0x8C);
+	if (rate <= 41000)
+		iowrite32(0x02, marian->iobase + 0x8C);
+	else if (rate <= 82000)
+		iowrite32(0x01, marian->iobase + 0x8C);
+	else
+		iowrite32(0x00, marian->iobase + 0x8C);
+
 	marian_generic_set_dco(marian, rate);
 }
 
@@ -592,57 +533,6 @@ static void marian_m2_set_speedmode(struct marian_card *marian, unsigned int rat
 {
 	marian_generic_set_speedmode(marian, rate);
 	marian_m2_write_port_frame(marian);
-}
-
-static int marian_generic_speedmode_info(struct snd_kcontrol *kcontrol,
-					 struct snd_ctl_elem_info *uinfo)
-{
-	static const char * const texts[] = { "1FS", "2FS", "4FS" };
-
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
-	uinfo->count = 1;
-	uinfo->value.enumerated.items = 2;
-	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
-		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
-	strscpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item],
-		sizeof(uinfo->value.enumerated.name));
-	return 0;
-}
-
-static int marian_generic_speedmode_get(struct snd_kcontrol *kcontrol,
-					struct snd_ctl_elem_value *ucontrol)
-{
-	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-
-	ucontrol->value.enumerated.item[0] = marian->speedmode - 1;
-
-	return 0;
-}
-
-static int marian_generic_speedmode_put(struct snd_kcontrol *kcontrol,
-					struct snd_ctl_elem_value *ucontrol)
-{
-	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
-
-	spin_lock(&marian->reglock);
-	marian_m2_set_speedmode(marian, 48000);
-	spin_unlock(&marian->reglock);
-
-	return 0;
-}
-
-static int marian_generic_speedmode_create(struct marian_card *marian)
-{
-	struct snd_kcontrol_new c = {
-		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
-		.name = "Speed Mode",
-		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE | SNDRV_CTL_ELEM_ACCESS_VOLATILE,
-		.info = marian_generic_speedmode_info,
-		.get = marian_generic_speedmode_get,
-		.put = marian_generic_speedmode_put,
-	};
-
-	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
 }
 
 static int marian_m2_sync_state_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
@@ -863,7 +753,7 @@ static int marian_m2_output_frame_mode_create(struct marian_card *marian, char *
 static void marian_m2_set_clock_source(struct marian_card *marian, u8 source)
 {
 	spin_lock(&marian->reglock);
-	writel(source, marian->iobase + 0x90);
+	iowrite32(source, marian->iobase + 0x90);
 	marian->clock_source = source;
 	spin_unlock(&marian->reglock);
 }
@@ -1002,8 +892,8 @@ static void marian_m2_create_controls(struct marian_card *marian)
 	marian_m2_output_frame_mode_create(marian, "Output 2 96kHz Frame",
 					   M2_OUT2_FM_CTL_ID);
 	marian_m2_clock_source_create(marian);
-	marian_generic_speedmode_create(marian);
-	marian_generic_dco_create(marian);
+	marian_generic_dco_int_create(marian, "DCO Freq (Hz)");
+	marian_generic_dco_millis_create(marian, "DCO Freq (millis)");
 	marian_control_pcm_loopback_create(marian);
 }
 
@@ -1047,15 +937,13 @@ static void marian_proc_status_generic(struct marian_card *marian, struct snd_in
 
 	snd_iprintf(buffer, "\n*** Card status\n");
 	snd_iprintf(buffer, "Firmware build: %08x\n", ioread32(marian->iobase + 0xFC));
-	snd_iprintf(buffer, "Speed mode   : %uFS (1..%u)\n",
-		    marian->speedmode, M2_MAX_SPEEDMODE);
 	snd_iprintf(buffer, "Clock master : %s\n", (marian->clock_source == 1) ? "yes" : "no");
 	snd_iprintf(buffer, "DCO frequency: %d.%d Hz\n", marian->dco, marian->dco_millis);
-	snd_iprintf(buffer, "DCO detune   : %d Cent\n", marian->detune);
 }
 
-static void marian_m2_proc_status(struct marian_card *marian, struct snd_info_buffer *buffer)
+static void snd_marian_proc_status(struct snd_info_entry *entry, struct snd_info_buffer *buffer)
 {
+	struct marian_card *marian = entry->private_data;
 	u8 v1, v2;
 
 	marian_proc_status_generic(marian, buffer);
@@ -1114,11 +1002,7 @@ static void marian_m2_proc_status(struct marian_card *marian, struct snd_info_bu
 			    (v1 & 0x08) ? "sync" : "lock",
 			    (v2 & 0x04) ? 64 : 56, (v2 & 0x08) ? 96 : 48,
 			    marian_measure_freq(marian, 5));
-}
 
-static void snd_marian_proc_status(struct snd_info_entry  *entry, struct snd_info_buffer *buffer)
-{
-	marian_m2_proc_status(entry->private_data, buffer);
 }
 
 static void marian_m2_proc_ports(struct marian_card *marian,
@@ -1281,7 +1165,8 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 	spin_lock(&marian->reglock);
 
 	marian_m2_set_speedmode(marian, params_rate(params));
-	marian->detune = 0;
+
+	marian_generic_set_dco(marian, params_rate(params));
 	spin_unlock(&marian->reglock);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
@@ -1294,27 +1179,21 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static void marian_m2_prepare(struct marian_card *marian)
+static int marian_m2_prepare(struct snd_pcm_substream *substream)
 {
+	struct marian_card *marian = snd_pcm_substream_chip(substream);
 	u32 mask = 0xFFFFFFFF;
 
 	spin_lock(&marian->reglock);
-	writel(mask, marian->iobase + 0x20);
-	writel(mask, marian->iobase + 0x24);
-	writel(mask, marian->iobase + 0x28);
-	writel(mask, marian->iobase + 0x2C);
-	writel(mask, marian->iobase + 0x30);
-	writel(mask, marian->iobase + 0x34);
-	writel(mask, marian->iobase + 0x38);
-	writel(mask, marian->iobase + 0x3C);
+	iowrite32(mask, marian->iobase + 0x20);
+	iowrite32(mask, marian->iobase + 0x24);
+	iowrite32(mask, marian->iobase + 0x28);
+	iowrite32(mask, marian->iobase + 0x2C);
+	iowrite32(mask, marian->iobase + 0x30);
+	iowrite32(mask, marian->iobase + 0x34);
+	iowrite32(mask, marian->iobase + 0x38);
+	iowrite32(mask, marian->iobase + 0x3C);
 	spin_unlock(&marian->reglock);
-}
-
-static int snd_marian_prepare(struct snd_pcm_substream *substream)
-{
-	struct marian_card *marian = snd_pcm_substream_chip(substream);
-
-	marian_m2_prepare(marian);
 
 	return 0;
 }
@@ -1331,25 +1210,25 @@ static int snd_marian_trigger(struct snd_pcm_substream *substream, int cmd)
 		if (marian->loopback)
 			irq_flags |= M2_ENABLE_LOOPBACK;
 
-		writel(0x3, marian->iobase + SERAPH_WR_DMA_ENABLE);
-		writel(irq_flags, marian->iobase + SERAPH_WR_IE_ENABLE);
+		iowrite32(0x3, marian->iobase + SERAPH_WR_DMA_ENABLE);
+		iowrite32(irq_flags, marian->iobase + SERAPH_WR_IE_ENABLE);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 		irq_flags = M2_DISABLE_PLAY_IRQ | M2_DISABLE_CAPT_IRQ;
-		writel(irq_flags, marian->iobase + SERAPH_WR_IE_ENABLE);
-		writel(0x0, marian->iobase + SERAPH_WR_DMA_ENABLE);
+		iowrite32(irq_flags, marian->iobase + SERAPH_WR_IE_ENABLE);
+		iowrite32(0x0, marian->iobase + SERAPH_WR_DMA_ENABLE);
 
 		// unarm channels to inhibit playback from the FPGA's internal buffer
-		writel(0, marian->iobase + 0x08);
-		writel(0, marian->iobase + 0x0C);
-		writel(0, marian->iobase + 0x20);
-		writel(0, marian->iobase + 0x24);
-		writel(0, marian->iobase + 0x28);
-		writel(0, marian->iobase + 0x2C);
-		writel(0, marian->iobase + 0x30);
-		writel(0, marian->iobase + 0x34);
-		writel(0, marian->iobase + 0x38);
-		writel(0, marian->iobase + 0x3C);
+		iowrite32(0, marian->iobase + 0x08);
+		iowrite32(0, marian->iobase + 0x0C);
+		iowrite32(0, marian->iobase + 0x20);
+		iowrite32(0, marian->iobase + 0x24);
+		iowrite32(0, marian->iobase + 0x28);
+		iowrite32(0, marian->iobase + 0x2C);
+		iowrite32(0, marian->iobase + 0x30);
+		iowrite32(0, marian->iobase + 0x34);
+		iowrite32(0, marian->iobase + 0x38);
+		iowrite32(0, marian->iobase + 0x3C);
 		break;
 	default:
 		return -EINVAL;
@@ -1382,7 +1261,7 @@ static const struct snd_pcm_ops snd_marian_playback_ops = {
 	.open = snd_marian_playback_open,
 	.close = snd_marian_playback_release,
 	.hw_params = snd_marian_hw_params,
-	.prepare = snd_marian_prepare,
+	.prepare = marian_m2_prepare,
 	.trigger = snd_marian_trigger,
 	.pointer = snd_marian_hw_pointer,
 	.mmap = snd_marian_mmap,
@@ -1392,7 +1271,7 @@ static const struct snd_pcm_ops snd_marian_capture_ops = {
 	.open = snd_marian_capture_open,
 	.close = snd_marian_capture_release,
 	.hw_params = snd_marian_hw_params,
-	.prepare = snd_marian_prepare,
+	.prepare = marian_m2_prepare,
 	.trigger = snd_marian_trigger,
 	.pointer = snd_marian_hw_pointer,
 	.mmap = snd_marian_mmap,
@@ -1415,17 +1294,18 @@ static void construct_capture_buffer(struct marian_card *marian)
 static int marian_m2_init(struct marian_card *marian)
 {
 	// reset DMA engine
-	writel(0x00000000, marian->iobase);
+	iowrite32(0x00000000, marian->iobase);
 
 	// disable play interrupt
-	writel(M2_DISABLE_PLAY_IRQ, marian->iobase + SERAPH_WR_IE_ENABLE);
+	iowrite32(M2_DISABLE_PLAY_IRQ, marian->iobase + SERAPH_WR_IE_ENABLE);
 
 	marian_generic_set_speedmode(marian, RATE_SLOW);
+
 	// init internal clock and set it as clock source
 	marian_m2_set_clock_source(marian, 1);
 
 	// init SPI clock divider
-	writel(0x1F, marian->iobase + MARIAN_SPI_CLOCK_DIVIDER);
+	iowrite32(0x1F, marian->iobase + MARIAN_SPI_CLOCK_DIVIDER);
 
 	marian->shadow_40 = 0x00;
 	marian->shadow_41 = (1 << M2_TX_ENABLE);
@@ -1512,11 +1392,10 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci, unsigne
 		return err;
 	}
 
-	writel((u32)marian->dmabuf.addr,
-	       marian->iobase + SERAPH_WR_DMA_ADR);
+	iowrite32((u32)marian->dmabuf.addr, marian->iobase + SERAPH_WR_DMA_ADR);
 
 	// Set 'block' count to buffer_frames/16 to set channel 'buffers' count (16 samples each)
-	writel(SUBSTREAM_BUF_SIZE / M2_FRAME_SIZE / 16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
+	iowrite32(SUBSTREAM_BUF_SIZE / M2_FRAME_SIZE / 16, marian->iobase + SERAPH_WR_DMA_BLOCKS);
 
 	construct_capture_buffer(marian);
 	construct_playback_buffer(marian);
@@ -1577,5 +1456,5 @@ static struct pci_driver marian_driver = {
 module_pci_driver(marian_driver);
 
 MODULE_AUTHOR("Florin Faber <faberman@linuxproaudio.org>");
-MODULE_DESCRIPTION("MARIAN Seraph series");
+MODULE_DESCRIPTION("MARIAN Seraph M2");
 MODULE_LICENSE("GPL");

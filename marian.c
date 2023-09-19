@@ -45,14 +45,15 @@
 #define PCI_DEVICE_ID_MARIAN_SERAPH_M2  0x5021
 
 #define RATE_SLOW	54000
-#define RATE_NORMAL	108000
+#define RATE_FAST	108000
 
 #define SPEEDMODE_SLOW	 1
-#define SPEEDMODE_NORMAL 2
-#define SPEEDMODE_FAST	 4
+#define SPEEDMODE_FAST 2
 
 #define MARIAN_PORTS_TYPE_INPUT	 0
 #define MARIAN_PORTS_TYPE_OUTPUT 1
+
+#define MARIAN_SPI_CLOCK_DIVIDER	0x74
 
 #define ERR_DEAD_WRITE	BIT(0)
 #define ERR_DEAD_READ	BIT(1)
@@ -120,8 +121,6 @@
 struct marian_card_descriptor;
 struct marian_card;
 
-static bool loopback;
-
 struct marian_card_descriptor {
 	char *name;
 	char *port_names;
@@ -181,6 +180,12 @@ struct marian_card {
 
 	/* spinlock for SPI communication */
 	spinlock_t spi_lock;
+
+	/* mutex for frequency measurement */
+	struct mutex freq_mutex;
+
+	/* Enables or disables hardware loopback */
+	int loopback;
 
 	unsigned int stream_open;
 
@@ -246,9 +251,6 @@ module_param_array(index, int, NULL, 0444);
 MODULE_PARM_DESC(index, "Index value for MARIAN PCI soundcard");
 module_param_array(id, charp, NULL, 0444);
 MODULE_PARM_DESC(id, "ID string for MARIAN PCI soundcard");
-
-module_param(loopback, bool, 0660);
-MODULE_PARM_DESC(loopback, "Enable hardware loopback");
 
 static void snd_marian_card_free(struct snd_card *card)
 {
@@ -410,8 +412,6 @@ static void marian_generic_set_dco(struct marian_card *marian, unsigned int freq
 	u64 val, v2;
 	s64 detune;
 
-	dev_dbg(marian->card->dev, "(.., %u, %u)\n", freq, millis);
-
 	val = (freq * 1000 + millis) * marian->speedmode;
 	val <<= 36;
 
@@ -431,7 +431,6 @@ static void marian_generic_set_dco(struct marian_card *marian, unsigned int freq
 	val = div_u64(val, 80000000);
 	val = div_u64(val, 1000);
 
-	dev_dbg(marian->card->dev, "  -> 0x%016llx (%llu)\n", val, val);
 	writel((u32)val, marian->iobase + 0x88);
 
 	marian->dco = freq;
@@ -449,14 +448,9 @@ static void marian_generic_set_speedmode(struct marian_card *marian, unsigned in
 		writel(0x00, marian->iobase + 0x8C); // for 48kHz in 1FS mode
 		marian->speedmode = SPEEDMODE_SLOW;
 		break;
-	case SPEEDMODE_NORMAL:
-		writel(0x03, marian->iobase + 0x80);
-		writel(0x01, marian->iobase + 0x8C); // for 96kHz in 2FS mode
-		marian->speedmode = SPEEDMODE_NORMAL;
-		break;
 	case SPEEDMODE_FAST:
 		writel(0x03, marian->iobase + 0x80);
-		writel(0x00, marian->iobase + 0x8C); // for 192kHz in 4FS mode
+		writel(0x01, marian->iobase + 0x8C); // for 96kHz in 2FS mode
 		marian->speedmode = SPEEDMODE_FAST;
 		break;
 	}
@@ -471,20 +465,11 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 	unsigned int speedmode;
 	int buffer_frames;
 
-	dev_dbg(marian->card->dev,
-		"%d ch %s @ %dHz, buffer size %d\n",
-		params_channels(params),
-		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture",
-		params_rate(params),
-		params_buffer_size(params));
-
 	buffer_frames = SUBSTREAM_BUF_SIZE / M2_FRAME_SIZE;
 
 	if (params_rate(params) < RATE_SLOW)
 		speedmode = SPEEDMODE_SLOW;
-	else if (params_rate(params) < RATE_NORMAL)
-		speedmode = SPEEDMODE_NORMAL;
-	else
+	else if (params_rate(params) < RATE_FAST)
 		speedmode = SPEEDMODE_FAST;
 
 	if (speedmode > marian->desc->speedmode_max) {
@@ -511,19 +496,6 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 	else
 		snd_pcm_set_runtime_buffer(substream, &marian->capture_buf);
 
-	dev_dbg(marian->card->dev, "  stream    : %s\n",
-		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture");
-	dev_dbg(marian->card->dev,
-		"  dma_area  : 0x%lx\n", (unsigned long)substream->runtime->dma_area);
-	dev_dbg(marian->card->dev,
-		"  dma_addr  : 0x%lx\n", (unsigned long)substream->runtime->dma_addr);
-	dev_dbg(marian->card->dev, "  dma_bytes : 0x%lx (%d)\n",
-		(unsigned long)substream->runtime->dma_bytes,
-		(int)substream->runtime->dma_bytes);
-
-	dev_dbg(marian->card->dev, "  setting card's DMA ADR to %08x\n",
-		(unsigned int)marian->dmabuf.addr);
-
 	// apply optional card specific hw constraints
 	if (marian->desc->hw_constraints_func)
 		marian->desc->hw_constraints_func(marian, substream, params);
@@ -534,19 +506,6 @@ static int snd_marian_hw_params(struct snd_pcm_substream *substream,
 static int snd_marian_prepare(struct snd_pcm_substream *substream)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
-
-	dev_dbg(marian->card->dev, "  stream    : %s\n",
-		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture");
-	// TODO Wrong conversions
-	dev_dbg(marian->card->dev, "  dma_area  : 0x%lx\n",
-		(unsigned long)substream->runtime->dma_area);
-	dev_dbg(marian->card->dev, "  dma_addr  : 0x%lx\n",
-		(unsigned long)substream->runtime->dma_addr);
-	dev_dbg(marian->card->dev, "  dma_bytes : 0x%lx (%d)\n",
-		(unsigned long)substream->runtime->dma_bytes,
-					(int)substream->runtime->dma_bytes);
-	dev_dbg(marian->card->dev, "  dma_buffer: 0x%lx\n",
-		(unsigned long)substream->runtime->dma_buffer_p);
 
 	if (marian->desc->prepare)
 		marian->desc->prepare(marian);
@@ -563,21 +522,21 @@ static void marian_silence(struct marian_card *marian)
 static int snd_marian_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
+	int irq_flags;
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
+		irq_flags = M2_DISABLE_PLAY_IRQ;
+		if (marian->loopback)
+			irq_flags |= M2_ENABLE_LOOPBACK;
+
 		marian_silence(marian);
-		dev_dbg(marian->card->dev, "  enabling DMA transfers\n");
 		writel(0x3, marian->iobase + SERAPH_WR_DMA_ENABLE);
-		dev_dbg(marian->card->dev, "  enabling IRQ\n");
-		writel((M2_ENABLE_LOOPBACK * loopback) | M2_DISABLE_PLAY_IRQ,
-		       marian->iobase + SERAPH_WR_IE_ENABLE);
+		writel(irq_flags, marian->iobase + SERAPH_WR_IE_ENABLE);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
-		dev_dbg(marian->card->dev, "  disabling IRQ\n");
-		writel(M2_DISABLE_PLAY_IRQ | M2_DISABLE_CAPT_IRQ,
-		       marian->iobase + SERAPH_WR_IE_ENABLE);
-		dev_dbg(marian->card->dev, "  disabling DMA transfers\n");
+		irq_flags = M2_DISABLE_PLAY_IRQ | M2_DISABLE_CAPT_IRQ;
+		writel(irq_flags, marian->iobase + SERAPH_WR_IE_ENABLE);
 		writel(0x0, marian->iobase + SERAPH_WR_DMA_ENABLE);
 		marian_silence(marian);
 
@@ -610,16 +569,6 @@ static snd_pcm_uframes_t snd_marian_hw_pointer(struct snd_pcm_substream *substre
 static int snd_marian_mmap(struct snd_pcm_substream *substream, struct vm_area_struct *vma)
 {
 	struct marian_card *marian = snd_pcm_substream_chip(substream);
-
-	dev_dbg(marian->card->dev,
-		"(%d, %016lx)\n", substream->stream, vma->vm_start);
-	dev_dbg(marian->card->dev,
-		"  substream->runtime.dma_addr = %pad\n  substream->runtime.dma_area = %p\n  substream->runtime.dma_bytes = %zu\n",
-		&substream->runtime->dma_addr, substream->runtime->dma_area,
-		substream->runtime->dma_bytes);
-	dev_dbg(marian->card->dev,
-		"  vma->vm_start = %016lx\n  vma->vm_end = %016lx\n",
-		vma->vm_start, vma->vm_end);
 
 	if (remap_pfn_range(vma, vma->vm_start, substream->runtime->dma_addr >> PAGE_SHIFT,
 			    vma->vm_end - vma->vm_start, vma->vm_page_prot) < 0) {
@@ -667,7 +616,7 @@ static void marian_generic_init(struct marian_card *marian)
 	writel(0x00000000, marian->iobase);
 
 	// disable play interrupt
-	writel(0x02, marian->iobase + 0xAC);
+	writel(M2_DISABLE_PLAY_IRQ, marian->iobase + SERAPH_WR_IE_ENABLE);
 
 	// init clock mode
 	marian_generic_set_speedmode(marian, SPEEDMODE_SLOW);
@@ -676,7 +625,7 @@ static void marian_generic_init(struct marian_card *marian)
 	marian_generic_set_clock_source(marian, 1);
 
 	// init SPI clock divider
-	writel(0x1F, marian->iobase + 0x74);
+	writel(0x1F, marian->iobase + MARIAN_SPI_CLOCK_DIVIDER);
 }
 
 static void construct_playback_buffer(struct marian_card *marian)
@@ -711,6 +660,7 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	marian->idx = idx;
 	spin_lock_init(&marian->reglock);
 	spin_lock_init(&marian->spi_lock);
+	mutex_init(&marian->freq_mutex);
 
 	err = pci_enable_device(pci);
 	if (err < 0)
@@ -729,8 +679,6 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 
 	marian->port = pci_resource_start(pci, 0);
 	len = pci_resource_len(pci, 0);
-	dev_dbg(&pci->dev, "grabbing memory region 0x%lx-0x%lx (%d bytes)\n",
-		marian->port, marian->port + len - 1, len);
 	marian->iobase = pci_iomap(pci, 0, 0);
 	if (!marian->iobase) {
 		dev_err(&pci->dev, "unable to grab region 0x%lx-0x%lx\n",
@@ -738,7 +686,6 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 		return -EBUSY;
 	}
 
-	dev_dbg(&pci->dev, "grabbing IRQ %d\n", pci->irq);
 	if (request_irq(pci->irq, snd_marian_interrupt, IRQF_SHARED, "marian", marian)) {
 		dev_err(&pci->dev, "unable to grab IRQ %d\n", pci->irq);
 		return -EBUSY;
@@ -762,7 +709,6 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
 	snd_pcm_set_ops(marian->pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_marian_capture_ops);
 
 	len = PAGE_ALIGN(desc->dma_bufsize);
-	dev_dbg(card->dev, "Allocating %d bytes DMA buffer\n", len);
 	err = snd_dma_alloc_pages(SNDRV_DMA_TYPE_CONTINUOUS, &pci->dev,
 				  desc->dma_bufsize, &marian->dmabuf);
 	if (err < 0) {
@@ -808,10 +754,10 @@ static int snd_marian_create(struct snd_card *card, struct pci_dev *pci,
  */
 static unsigned int marian_measure_freq(struct marian_card *marian, unsigned int source)
 {
+	mutex_lock(&marian->freq_mutex);
 	u32 val;
 	int tries = 5;
 
-	spin_lock(&marian->reglock);
 	writel(source & 0x7, marian->iobase + 0xC8);
 
 	while (tries > 0) {
@@ -822,7 +768,8 @@ static unsigned int marian_measure_freq(struct marian_card *marian, unsigned int
 		usleep_range(1000, 1200);
 		tries--;
 	}
-	spin_unlock(&marian->reglock);
+
+	mutex_unlock(&marian->freq_mutex);
 
 	if (tries > 0)
 		return (((1280000000 / ((val & 0x3FFFF) + 1)) + 5 * marian->speedmode)
@@ -1013,6 +960,50 @@ static int marian_generic_dco_detune_create(struct marian_card *marian, char *la
 	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
 }
 
+static int marian_control_pcm_loopback_info(struct snd_kcontrol *kcontrol,
+					    struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
+	uinfo->count = 1;
+	uinfo->value.integer.min = 0;
+	uinfo->value.integer.max = 1;
+
+	return 0;
+}
+
+static int marian_control_pcm_loopback_get(struct snd_kcontrol *kcontrol,
+					   struct snd_ctl_elem_value *ucontrol)
+{
+	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
+
+	ucontrol->value.integer.value[0] = marian->loopback;
+
+	return 0;
+}
+
+static int marian_control_pcm_loopback_put(struct snd_kcontrol *kcontrol,
+					   struct snd_ctl_elem_value *ucontrol)
+{
+	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
+
+	marian->loopback = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+static int marian_control_pcm_loopback_create(struct marian_card *marian)
+{
+	struct snd_kcontrol_new c = {
+		.iface = SNDRV_CTL_ELEM_IFACE_PCM,
+		.name = "Loopback",
+		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
+		.info = marian_control_pcm_loopback_info,
+		.get = marian_control_pcm_loopback_get,
+		.put = marian_control_pcm_loopback_put,
+	};
+
+	return snd_ctl_add(marian->card, snd_ctl_new1(&c, marian));
+}
+
 static void marian_generic_dco_create(struct marian_card *marian)
 {
 	marian_generic_dco_int_create(marian, "DCO Freq (Hz)");
@@ -1032,11 +1023,8 @@ static int marian_generic_speedmode_info(struct snd_kcontrol *kcontrol,
 	case SPEEDMODE_SLOW:
 		uinfo->value.enumerated.items = 1;
 		break;
-	case SPEEDMODE_NORMAL:
-		uinfo->value.enumerated.items = 2;
-		break;
 	case SPEEDMODE_FAST:
-		uinfo->value.enumerated.items = 3;
+		uinfo->value.enumerated.items = 2;
 		break;
 	}
 	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
@@ -1051,10 +1039,7 @@ static int marian_generic_speedmode_get(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
-	if (marian->speedmode == SPEEDMODE_FAST)
-		ucontrol->value.enumerated.item[0] = 2;
-	else
-		ucontrol->value.enumerated.item[0] = marian->speedmode - 1;
+	ucontrol->value.enumerated.item[0] = marian->speedmode - 1;
 
 	return 0;
 }
@@ -1065,10 +1050,7 @@ static int marian_generic_speedmode_put(struct snd_kcontrol *kcontrol,
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
 	spin_lock(&marian->reglock);
-	if (ucontrol->value.enumerated.item[0] < 2)
-		marian->desc->set_speedmode(marian, ucontrol->value.enumerated.item[0] + 1);
-	else
-		marian->desc->set_speedmode(marian, SPEEDMODE_FAST);
+	marian->desc->set_speedmode(marian, ucontrol->value.enumerated.item[0] + 1);
 	spin_unlock(&marian->reglock);
 
 	return 0;
@@ -1112,14 +1094,8 @@ static int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t
 
 	spin_lock(&marian->spi_lock);
 
-	dev_dbg(marian->card->dev,
-		"(.., 0x%04x, %u, [%02x, %02x], %u, ..)\n", cs, bits_write,
-		data_write[0], data_write[1], bits_read);
-
-	if (spi_wait_for_ar(marian) < 0) {
-		dev_dbg(marian->card->dev, "Resetting SPI bus\n");
-		writel(0x1234, marian->iobase + 0x70);
-	}
+	if (spi_wait_for_ar(marian) < 0)
+		writel(0x1234, marian->iobase + 0x70); // Resetting SPI bus
 
 	writel(cs, marian->iobase + 0x60);         // chip select register
 	writel(bits_write, marian->iobase + 0x64); // number of bits to write
@@ -1141,7 +1117,7 @@ static int marian_spi_transfer(struct marian_card *marian, uint16_t cs, uint16_t
 			goto unlock_exit;
 		}
 
-		buf = readl(marian->iobase + 0x74);
+		buf = readl(marian->iobase + MARIAN_SPI_CLOCK_DIVIDER);
 
 		buf <<= 32 - bits_read;
 		i = 0;
@@ -1184,14 +1160,7 @@ static int marian_m2_sync_state_info(struct snd_kcontrol *kcontrol, struct snd_c
 {
 	static const char * const texts[] = { "No Signal", "Lock", "Sync" };
 
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
-	uinfo->count = 1;
-	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
-	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
-		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
-	strscpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item],
-		sizeof(uinfo->value.enumerated.name));
-	return 0;
+	return snd_ctl_enum_info(uinfo, 1, ARRAY_SIZE(texts), texts);
 }
 
 static int marian_m2_sync_state_get(struct snd_kcontrol *kcontrol,
@@ -1228,14 +1197,7 @@ static int marian_m2_channel_mode_info(struct snd_kcontrol *kcontrol,
 {
 	static const char * const texts[] = { "56ch", "64ch" };
 
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
-	uinfo->count = 1;
-	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
-	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
-		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
-	strscpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item],
-		sizeof(uinfo->value.enumerated.name));
-	return 0;
+	return snd_ctl_enum_info(uinfo, 1, ARRAY_SIZE(texts), texts);
 }
 
 static int marian_m2_input_channel_mode_get(struct snd_kcontrol *kcontrol,
@@ -1269,14 +1231,7 @@ static int marian_m2_frame_mode_info(struct snd_kcontrol *kcontrol, struct snd_c
 {
 	static const char * const texts[] = { "48kHz", "96kHz" };
 
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
-	uinfo->count = 1;
-	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
-	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
-		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
-	strscpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item],
-		sizeof(uinfo->value.enumerated.name));
-	return 0;
+	return snd_ctl_enum_info(uinfo, 1, ARRAY_SIZE(texts), texts);
 }
 
 static int marian_m2_input_frame_mode_get(struct snd_kcontrol *kcontrol,
@@ -1372,12 +1327,7 @@ static int marian_m2_output_channel_mode_create(struct marian_card *marian,
 static int marian_m2_output_frame_mode_info(struct snd_kcontrol *kcontrol,
 					    struct snd_ctl_elem_info *uinfo)
 {
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
-	uinfo->count = 1;
-	uinfo->value.integer.min = 0;
-	uinfo->value.integer.max = 1;
-
-	return 0;
+	return snd_ctl_boolean_mono_info(kcontrol, uinfo);
 }
 
 static int marian_m2_output_frame_mode_get(struct snd_kcontrol *kcontrol,
@@ -1422,9 +1372,6 @@ static int marian_m2_output_frame_mode_put(struct snd_kcontrol *kcontrol,
 {
 	struct marian_card *marian = snd_kcontrol_chip(kcontrol);
 
-	dev_dbg(marian->card->dev, "%lu -> %u\n",
-		kcontrol->private_value, ucontrol->value.enumerated.item[0]);
-
 	spin_lock(&marian->reglock);
 	marian_m2_set_port_frame(marian, kcontrol->private_value,
 				 ucontrol->value.enumerated.item[0]);
@@ -1454,14 +1401,7 @@ static int marian_m2_clock_source_info(struct snd_kcontrol *kcontrol,
 	static const char * const texts[] = {"Internal", "Sync Bus",
 					      "Input Port 1", "Input Port 2"};
 
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
-	uinfo->count = 1;
-	uinfo->value.enumerated.items = ARRAY_SIZE(texts);
-	if (uinfo->value.enumerated.item >= uinfo->value.enumerated.items)
-		uinfo->value.enumerated.item = uinfo->value.enumerated.items - 1;
-	strscpy(uinfo->value.enumerated.name, texts[uinfo->value.enumerated.item],
-		sizeof(uinfo->value.enumerated.name));
-	return 0;
+	return snd_ctl_enum_info(uinfo, 1, ARRAY_SIZE(texts), texts);
 }
 
 static int marian_m2_clock_source_get(struct snd_kcontrol *kcontrol,
@@ -1579,6 +1519,7 @@ static void marian_m2_create_controls(struct marian_card *marian)
 	marian_m2_clock_source_create(marian);
 	marian_generic_speedmode_create(marian);
 	marian_generic_dco_create(marian);
+	marian_control_pcm_loopback_create(marian);
 }
 
 static void marian_m2_set_float(struct marian_card *marian, enum m2_num_mode state)
@@ -1768,7 +1709,7 @@ static struct marian_card_descriptor descriptor = {
 			| SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200
 			| SNDRV_PCM_RATE_96000),
 		.rate_min = 28000,
-		.rate_max = 113000,
+		.rate_max = RATE_FAST,
 		.channels_min = M2_CHANNELS_COUNT,
 		.channels_max = M2_CHANNELS_COUNT,
 		.buffer_bytes_max = SUBSTREAM_BUF_SIZE,
@@ -1786,7 +1727,7 @@ static struct marian_card_descriptor descriptor = {
 			| SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200
 			| SNDRV_PCM_RATE_96000),
 		.rate_min = 28000,
-		.rate_max = 113000,
+		.rate_max = RATE_FAST,
 		.channels_min = M2_CHANNELS_COUNT,
 		.channels_max = M2_CHANNELS_COUNT,
 		.buffer_bytes_max = SUBSTREAM_BUF_SIZE,
